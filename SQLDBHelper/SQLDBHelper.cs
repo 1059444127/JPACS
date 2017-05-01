@@ -60,10 +60,6 @@ namespace JPACS.Model
         /// <param name="image"></param>
         public void AddImage(ref Image image)
         {
-            int nImageId = -1;
-            int nSeriesId = -1;
-            int nStudyId = -1;
-
             Study study = image.Series.Study;
             using (TransactionScope scope = new TransactionScope())
             {
@@ -105,7 +101,7 @@ namespace JPACS.Model
                     com.Parameters.Add(parm);
 
                     com.Parameters.AddWithValue("@seriesUid", series.InstanceUid);
-                    com.Parameters.AddWithValue("@studyId", nStudyId);
+                    com.Parameters.AddWithValue("@studyId", study.Id);
                     com.Parameters.AddWithValue("@seriesNumber", series.SeriesNumber);
                     com.Parameters.AddWithValue("@seriesDate", series.SeriesDateString);
                     com.Parameters.AddWithValue("@seriesTime", series.SeriesTimeString);
@@ -132,7 +128,7 @@ namespace JPACS.Model
                     com.Parameters.Add(parm);
 
                     com.Parameters.AddWithValue("@imageUid", image.SOPInstanceUid);
-                    com.Parameters.AddWithValue("@seriesId", nSeriesId);
+                    com.Parameters.AddWithValue("@seriesId", series.Id);
                     com.Parameters.AddWithValue("@imageNumber", image.ImageNumber);
                     com.Parameters.AddWithValue("@imageRows", image.ImageRows);
                     com.Parameters.AddWithValue("@imageColumns", image.ImageColumns);
@@ -143,8 +139,8 @@ namespace JPACS.Model
                     image.Id = (int)parm.Value;
                 }
 
-                scope.Complete();
-            }
+            scope.Complete();
         }
+    }
     }
 }

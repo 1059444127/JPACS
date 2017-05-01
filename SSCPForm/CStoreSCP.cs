@@ -171,7 +171,8 @@ namespace JPACS.SSCPForm
                 FilePath = filePath,
                 Series = series,
                 ImageRows = dataset.Get<string>(DicomTag.Rows),
-                ImageColumns = dataset.Get<string>(DicomTag.Columns)
+                ImageColumns = dataset.Get<string>(DicomTag.Columns),
+                ImageNumber = string.Empty
             };
 
             //add to database
