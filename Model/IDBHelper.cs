@@ -28,6 +28,8 @@ namespace JPACS.Model
 
         #region Image
 
+        List<Image> GetImages();
+
         void AddImage(ref Image image);
 
         #endregion

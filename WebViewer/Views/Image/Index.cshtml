@@ -1,0 +1,64 @@
+﻿@model IEnumerable<JPACS.Model.Image>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+<table class="table">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.SOPInstanceUid)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ImageNumber)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ImageDateString)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ImageTimeString)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ImageRows)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ImageColumns)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.FilePath)
+        </th>
+        <th></th>
+    </tr>
+
+@foreach (var item in Model) {
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => item.SOPInstanceUid)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ImageNumber)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ImageDateString)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ImageTimeString)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ImageRows)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ImageColumns)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.FilePath)
+        </td>
+        <td>
+            @Html.ActionLink("Details", "Details", new { id=item.Id }) |
+        </td>
+    </tr>
+}
+
+</table>

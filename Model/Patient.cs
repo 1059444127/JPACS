@@ -9,7 +9,7 @@ namespace JPACS.Model
 {
     public class Patient
     {
-        private DateTime? _brithDate;
+        //private DateTime? _brithDate;
 
         public Patient(string patientId)
         {

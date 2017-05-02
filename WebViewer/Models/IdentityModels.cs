@@ -29,5 +29,7 @@ namespace WebPACS.Models
         {
             return new ApplicationDbContext();
         }
+
+        public System.Data.Entity.DbSet<JPACS.Model.Image> Images { get; set; }
     }
 }

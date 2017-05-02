@@ -1,0 +1,84 @@
+﻿@model JPACS.Model.Image
+
+@{
+    ViewBag.Title = "Details";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>Image</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.SOPInstanceUid)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.SOPInstanceUid)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.ImageNumber)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ImageNumber)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.ImageDateString)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ImageDateString)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.ImageTimeString)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ImageTimeString)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.ImageRows)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ImageRows)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.ImageColumns)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.ImageColumns)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.FilePath)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.FilePath)
+        </dd>
+
+    </dl>
+</div>
+<div>
+    <canvas id="canvasImage" width="500" height="500"></canvas>
+</div>
+<p>
+    @Html.ActionLink("Back to List", "Index")
+</p>
+
+<script>
+    window.onload = function() {
+        var canvas = document.getElementById('canvasImage');
+    }
+
+
+</script>

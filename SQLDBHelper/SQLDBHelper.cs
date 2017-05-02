@@ -140,5 +140,40 @@ namespace JPACS.Model
             scope.Complete();
         }
     }
+
+        public List<Image> GetImages()
+        {
+            List<Image> images = new List<Image>();
+
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+
+                SqlCommand com = new SqlCommand("select id, sopinstanceuid, imagerows, imagecolumns, objectfilepath from image");
+                com.Connection = conn;
+                com.CommandType = System.Data.CommandType.Text;
+
+                using (SqlDataReader reader = com.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var id = reader.GetInt32(0);
+                        var sopUid = reader.GetString(1);
+
+                        Image newImage = new Image(sopUid)
+                        {
+                            Id = id,
+                            ImageRows = reader.GetInt32(2).ToString(),
+                            ImageColumns = reader.GetInt32(3).ToString(),
+                            FilePath = reader.GetString(4)
+                        };
+
+                        images.Add(newImage);
+                    }
+                }
+            }
+
+            return images;
+        }
     }
 }
