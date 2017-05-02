@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dicom;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,11 +24,26 @@ namespace JPACS.Model
 
         public string StudyTimeString { get; set; }
 
-        public DateTime StudyDate { get; }
+        //public DateTime StudyDate { get; }
 
-        public DateTime StudyTime { get; }
+        //public DateTime StudyTime { get; }
 
-        public DateTime AcceptTime { get; }
+        //public DateTime AcceptTime { get; }
 
+        public static Study FromDataset(DicomDataset dataset)
+        {
+            var studyUid = dataset.GetTagString(DicomTag.StudyInstanceUID);
+
+            if (string.IsNullOrEmpty(studyUid))
+                return null;
+
+            Study study = new Study(studyUid)
+            {
+                StudyDateString = dataset.Get<string>(DicomTag.StudyDate),
+                StudyTimeString = dataset.Get<string>(DicomTag.StudyTime)            
+            };
+
+            return study;
+        }
     }
 }

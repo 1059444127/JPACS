@@ -21,8 +21,6 @@ namespace JPACS.Model
 
         public void AddOrUpdatePatient(ref Patient patient)
         {
-            int nId = -1;
-
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();

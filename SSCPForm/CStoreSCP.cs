@@ -130,50 +130,20 @@ namespace JPACS.SSCPForm
 
         private void SaveToDatabase(DicomDataset dataset, string filePath)
         {
-            var patientId = dataset.Get<string>(DicomTag.PatientID);
-            var patientName = dataset.Get<string>(DicomTag.PatientName);
-
-            Patient patient = new Patient(patientId)
-            {
-                PatientName = patientName,
-                Gender = dataset.Get<string>(DicomTag.PatientSex),
-                BirthDateString = dataset.Get<string>(DicomTag.PatientBirthDate)
-            };
+            Patient patient = Patient.FromDataset(dataset);
 
             IDBHelper dbHelper = DBHelperFacotry.GetDBHelper();
             dbHelper.AddOrUpdatePatient(ref patient);
 
-            //add study, series, and image
-            var studyUid = dataset.Get<string>(DicomTag.StudyInstanceUID);
+            Study study = Study.FromDataset(dataset);
+            study.Patient = patient;
 
-            Study study = new Study(studyUid)
-            {
-                StudyDateString = dataset.Get<string>(DicomTag.StudyDate),
-                StudyTimeString = dataset.Get<string>(DicomTag.StudyTime),
-                Patient = patient
-            };
+            Series series = Series.FromDataset(dataset);
+            series.Study = study;
 
-            var seriesUid = dataset.Get<string>(DicomTag.SeriesInstanceUID);
-            Series series = new Series(seriesUid)
-            {
-                SeriesNumber = dataset.Get<string>(DicomTag.SeriesNumber),
-                SeriesDateString = dataset.Get<string>(DicomTag.SeriesDate),
-                SeriesTimeString = dataset.Get<string>(DicomTag.SeriesTime),
-                BodyPart = dataset.Get<string>(DicomTag.BodyPartExamined),
-                ViewPosition = dataset.Get<string>(DicomTag.ViewPosition),
-                Modality = dataset.Get<string>(DicomTag.Modality),
-                Study = study
-            };
-
-            var SOPInstanceUid = dataset.Get<string>(DicomTag.SOPInstanceUID);
-            Image image = new Image(SOPInstanceUid)
-            {
-                FilePath = filePath,
-                Series = series,
-                ImageRows = dataset.Get<string>(DicomTag.Rows),
-                ImageColumns = dataset.Get<string>(DicomTag.Columns),
-                ImageNumber = string.Empty
-            };
+            Image image = Image.FromDataset(dataset);
+            image.FilePath = filePath;
+            image.Series = series;
 
             //add to database
             dbHelper.AddImage(ref image);

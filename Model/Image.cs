@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dicom;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,5 +32,17 @@ namespace JPACS.Model
 
         public Series Series { get; set; }
 
+        public static Image FromDataset(DicomDataset dataset)
+        {
+            var SOPInstanceUid = dataset.GetTagString(DicomTag.SOPInstanceUID);
+            Image image = new Image(SOPInstanceUid)
+            {
+                ImageRows = dataset.GetTagString(DicomTag.Rows),
+                ImageColumns = dataset.GetTagString(DicomTag.Columns),
+                ImageNumber = string.Empty
+            };
+
+            return image;
+        }
     }
 }

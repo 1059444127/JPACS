@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dicom;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,5 +31,21 @@ namespace JPACS.Model
         public string SeriesNumber { get; set; }
 
         public string Modality { get; set; }
+
+        public static Series FromDataset(DicomDataset dataset)
+        {
+            var seriesUid = dataset.Get<string>(DicomTag.SeriesInstanceUID);
+            Series series = new Series(seriesUid)
+            {
+                SeriesNumber = dataset.GetTagString(DicomTag.SeriesNumber),
+                SeriesDateString = dataset.GetTagString(DicomTag.SeriesDate),
+                SeriesTimeString = dataset.GetTagString(DicomTag.SeriesTime),
+                BodyPart = dataset.GetTagString(DicomTag.BodyPartExamined),
+                ViewPosition = dataset.GetTagString(DicomTag.ViewPosition),
+                Modality = dataset.GetTagString(DicomTag.Modality)
+            };
+
+            return series;
+        }
     }
 }
