@@ -68,16 +68,30 @@
 
     </dl>
 </div>
-<div>
-    <canvas id="canvasImage" width="500" height="500"></canvas>
-</div>
 <p>
     @Html.ActionLink("Back to List", "Index")
 </p>
+<div>
+    <canvas id="canvasImage" width="1100" height="600"></canvas>
+</div>
 
 <script>
+
     window.onload = function() {
         var canvas = document.getElementById('canvasImage');
+        var ctx2 = canvas.getContext('2d');
+
+        var imageUrl = "@(ViewBag.ImageUrl)";
+
+        var oImage = new Image();
+
+        oImage.onload = function () {
+            //canvas.width = oImage.width;
+            //canvas.height = oImage.height;
+            ctx2.drawImage(oImage, 0, 0, oImage.width, oImage.height, 0, 0, canvas.width, canvas.height);
+        }
+
+        oImage.src = imageUrl;
     }
 
 

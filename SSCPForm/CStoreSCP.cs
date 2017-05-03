@@ -102,6 +102,8 @@ namespace JPACS.SSCPForm
                 string file = Path.Combine(folder, imageUid) + ".dcm";
                 request.File.Save(file);
 
+                //Dicom.Imaging.DicomImage dcmImage = new Dicom.Imaging.DicomImage(file);
+
                 SaveToDatabase(request.Dataset, file);
 
                 return new DicomCStoreResponse(request, DicomStatus.Success);
