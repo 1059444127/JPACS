@@ -4,10 +4,9 @@
     ViewBag.Title = "Details";
 }
 
-<h2>Details</h2>
+<h2>Image View</h2>
 
 <div>
-    <h4>Image</h4>
     <hr />
     <dl class="dl-horizontal">
         <dt>
@@ -71,29 +70,29 @@
 <p>
     @Html.ActionLink("Back to List", "Index")
 </p>
+
+<table id="imageToolBar">
+    <tr>
+        <td>
+            <input id="btnRotate" type="button" value="Rotate" class="toolBarBtn"/>
+        </td>
+        <td>
+            <input id="btnPan" type="button" value="Pan" class="toolBarBtn" />
+        </td>
+        <td>
+            <input id="btnReset" type="button" value="Reset" class="toolBarBtn" />
+        </td>
+    </tr>
+</table>
+
 <div>
     <canvas id="canvasImage" width="1100" height="600"></canvas>
 </div>
 
 <script>
-
-    window.onload = function() {
-        var canvas = document.getElementById('canvasImage');
-        var ctx2 = canvas.getContext('2d');
-
-        var imageUrl = "@(ViewBag.ImageUrl)";
-
-        var oImage = new Image();
-
-        oImage.onload = function () {
-            //canvas.width = oImage.width;
-            //canvas.height = oImage.height;
-            
-            ctx2.drawImage(oImage, 0, 0, oImage.width, oImage.height, 100, 100);
-        }
-
-        oImage.src = imageUrl;
-    }
-
-
+    var imageUrl = "@(ViewBag.ImageUrl)";
 </script>
+
+@section Scripts {
+    @Scripts.Render("~/scripts/imageView.js")
+}

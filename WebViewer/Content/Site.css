@@ -26,3 +26,7 @@ textarea {
 #canvasImage{
     background-color: #f5f5f5;
 }
+
+#imageToolBar .toolBarBtn{
+    width: 70px;
+}
