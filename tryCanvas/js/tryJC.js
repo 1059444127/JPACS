@@ -36,7 +36,7 @@ function screenToImage(x, y, imgTrans){
 	return {x: imgPt[0], y:imgPt[1]};
 }
 
-function imageToScreen(x, y, imgTrans){
+function imageToScreen(x, y, trans){
 	
 	var imgPt = [x, y, 1];
 	var screenPt = [0, 0, 1];
@@ -79,37 +79,37 @@ window.onload = function(){
 function onDblClickTestRect(){
 	this.visible(false);
 	
-	var rect = this.getRect();
-	
-	var transImg = jc.layer('imgLayer').transform();
-	
 	jc.start('c1', true);
 	
-	jc.circle(0,0,10).layer('tmpLayer');
-	jc.layer('tmpLayer').transform(transImg[0][0], transImg[0][1], transImg[0][2], transImg[1][0], transImg[1][1], transImg[1][2], true);
-	jc.layer('tmpLayer').up('top').draggable();
-	jc.layer('imgLayer').down('bottom');
+	var tmpLayer = jc.layer('tmpLayer');
+	tmpLayer.draggable();
+	jc.layer('imgLayer').draggable({disabled: true});
 	
-	var startPos = screenToImage(rect.x, rect.y, transImg);
-	jc.rect(startPos.x, startPos.y, rect.width, rect.height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
-
+	var transImg = jc.layer('imgLayer').transform();
+	//var n1 = transImg[0][0], n2 = transImg[0][1], n3 = transImg[0][2], n4 = transImg[1][0], n5 = transImg[1][1], n6=transImg[1][2];	
+	//tmpLayer.transform(n1, n2, n3, n4, n5, n6);
+	
+	
+	//var rect = this.getRect(); //screen point
+	//var startPos = imageToScreen(this._x, this._y, transImg);
+	
+	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
 	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)');
-	jc.circle(0, 0, 10).layer('tmpLayer');
 	
-	//jc.layer('imgLayer').draggable({disabled: true});
+	tmpLayer.rotate(45, 'center');
+	
 }
 
 function onDblClickMockRect(){
 	
-	jc.start('c1', true);
-	var testRect = jc('#idRect');
+	//jc.start('c1', true);
 	
-	var rect = this.getRect();
-
 	jc('#idRect').del();
+
+	//var rect = this.getRect();
 	
-	//var startPos = screenToImage(rect.x, rect.y, jc.layer('imgLayer').transform());
-	jc.rect(rect.x, rect.y, rect.width, rect.height).layer('imgLayer').dblclick(onDblClickTestRect).id('idRect');
+	var startPos = screenToImage(this._x, this._y, jc.layer('imgLayer').transform());
+	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('imgLayer').dblclick(onDblClickTestRect).id('idRect');
 	
 	
 	jc.layer('tmpLayer').del();
