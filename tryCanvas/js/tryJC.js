@@ -82,36 +82,37 @@ function onDblClickTestRect(){
 	jc.start('c1', true);
 	
 	var tmpLayer = jc.layer('tmpLayer');
-	tmpLayer.draggable();
+	tmpLayer.draggable({disabled:true});
 	jc.layer('imgLayer').draggable({disabled: true});
 	
 	var transImg = jc.layer('imgLayer').transform();
-	//var n1 = transImg[0][0], n2 = transImg[0][1], n3 = transImg[0][2], n4 = transImg[1][0], n5 = transImg[1][1], n6=transImg[1][2];	
-	//tmpLayer.transform(n1, n2, n3, n4, n5, n6);
-	
+	var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6=transImg[1][2];	
+
+	tmpLayer.transform(n1,n2,n3,n4,n5,n6);
+	var transTmp = tmpLayer.transform();
 	
 	//var rect = this.getRect(); //screen point
-	//var startPos = imageToScreen(this._x, this._y, transImg);
-	
-	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
-	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)');
-	
-	tmpLayer.rotate(45, 'center');
-	
+	var startPos = {x:this._x, y:this._y};//imageToScreen(this._x, this._y, transImg);
+	this._width += 20;
+	this._height += 20;
+	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect).draggable();
+	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)').draggable();
+
 }
 
 function onDblClickMockRect(){
 	
-	//jc.start('c1', true);
+	jc.start('c1', true);
 	
-	jc('#idRect').del();
-
+	var originalRect = jc('#idRect');
+	var mockRect = jc('#idRectMock');
+	
 	//var rect = this.getRect();
 	
-	var startPos = screenToImage(this._x, this._y, jc.layer('imgLayer').transform());
+	var startPos = {x:this._transformdx +originalRect._x, y:this._transformdy+originalRect._y};//screenToImage(this._x, this._y, jc.layer('imgLayer').transform());
 	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('imgLayer').dblclick(onDblClickTestRect).id('idRect');
 	
-	
+	originalRect.del();
 	jc.layer('tmpLayer').del();
 	jc.layer('imgLayer').draggable({disabled: false});
 }
