@@ -48,7 +48,8 @@ function imageToScreen(x, y, trans){
 }
 
 window.onload = function(){
-	//var c1 = document.getElementById('c1');
+	var c1 = document.getElementById('c1');
+	c1.onmousewheel = onCanvasScale;
 	//var ogc = c1.getContext('2d');
 	
 	var img = new Image();
@@ -65,7 +66,16 @@ window.onload = function(){
 		//draw test rect
 		jc.rect(50, 50, 100, 30).id('idRect').layer('imgLayer').dblclick(onDblClickTestRect);
 		
-		jc.layer('imgLayer').draggable({drag:onlayerDrag}).down('bottom');
+		jc.layer('imgLayer').draggable({drag:onlayerDrag, 
+			start:function(arg){
+				c1.style.cursor = "move";
+				log2('start drag');
+			},
+			stop:function(arg){
+				c1.style.cursor = "default";
+				log2('stop drag');
+			}
+		}).down('bottom');
 		
 		$("#btnRect").on('click', drawRect);	
 		$("#btnRotate").on("click", onRotate);
@@ -74,6 +84,20 @@ window.onload = function(){
 	}
 
 	img.src="img/img1.jpg";
+}
+
+
+function onCanvasScale(evt){
+	var scaleValue = 1;
+	if(evt.wheelDelta /120 > 0){
+		//up
+		scaleValue = 0.9;
+	}
+	else{//down
+		scaleValue = 1.1;
+	}
+	
+	jc.layer('imgLayer').scale(scaleValue);
 }
 
 function onDblClickTestRect(){
@@ -85,6 +109,7 @@ function onDblClickTestRect(){
 	tmpLayer.draggable({disabled:true});
 	jc.layer('imgLayer').draggable({disabled: true});
 	
+	//note the transform sequence, transform return {[1,3,5],[2,4,6]}, but the parameter needs(1, 2, 3, 4, 5, 6)
 	var transImg = jc.layer('imgLayer').transform();
 	var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6=transImg[1][2];	
 
@@ -93,8 +118,8 @@ function onDblClickTestRect(){
 	
 	//var rect = this.getRect(); //screen point
 	var startPos = {x:this._x, y:this._y};//imageToScreen(this._x, this._y, transImg);
-	this._width += 20;
-	this._height += 20;
+	//this._width += 20;
+	//this._height += 20;
 	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect).draggable();
 	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)').draggable();
 
@@ -116,59 +141,6 @@ function onDblClickMockRect(){
 	jc.layer('tmpLayer').del();
 	jc.layer('imgLayer').draggable({disabled: false});
 }
-
-//var focusCurrent = false;
-//function onDblClickTestRect(rect){
-//	
-//	focusCurrent = !focusCurrent;
-//	
-//	if(focusCurrent){//working 
-//		//this.layer('tmpLayer');
-//		//this.color('rgba(255,0,0,1)');
-//		this.visible(false);
-//		var rect = this.getRect();
-//		jc.rect(rect.x, rect.y, rect.width, rect.height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)');
-//		
-//		var tmpLayer = jc.layer('tmpLayer');
-//		tmpLayer.draggable();
-//		
-//		jc.circle(rect.x,rect.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)');
-//	}
-//	else{//stop working
-//		this.layer('imgLayer');
-//		this.color('rgba(0,0,0,1)');
-//		
-//	}
-//	
-//	var layer = jc.layer('imgLayer');
-//
-//	layer.draggable({disabled:focusCurrent, drag:onlayerDrag});
-//	
-//
-//	this.draggable({disabled: !focusCurrent, 
-//		start:function(arg){
-//			
-//			var imgTrans = jc("#idImg").transform();
-//			var layerTrans = layer.transform();
-//		
-//			//jc.canvas('c1').save();
-//			//jc.canvas('c1').transform(jc("#idImg").transform());
-//		}, 
-//		stop: function(arg){
-//			//jc.canvas('c1').restore();
-//			var imgTrans = jc("#idImg").transform();
-//		},
-//		drag: function(arg, arg2){
-//			log2("drag x:"+arg.x +"y:"+ arg.y);
-//			
-//			var imgPt = screenToImage(arg.x, arg.y, layer.transform());
-//			
-//			log4("img x:" +imgPt.x+"y:"+imgPt.y);
-//		}
-//	});
-//	
-//}
-
 
 function onlayerDrag(arg){
 	var rect = jc('#idRect');
