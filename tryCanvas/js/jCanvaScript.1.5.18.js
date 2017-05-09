@@ -3252,10 +3252,18 @@ jCanvaScript.canvas = function(idCanvas)
 			{
 				var drag=optns.drag,
 					dobject=drag.object;
-				dobject.translate(mm.x-drag.x,mm.y-drag.y);
+				
+				var doneDrag = true;
+				if(drag.drag)
+				{
+					doneDrag = drag.drag.call(dobject,{x:mm.x,y:mm.y});
+				}	
+				
+				if(!doneDrag)
+					dobject.translate(mm.x-drag.x,mm.y-drag.y);
+					
 				drag.x=mm.x;
 				drag.y=mm.y;
-				if(drag.drag)drag.drag.call(dobject,{x:mm.x,y:mm.y});
 			}
 			var point = this.optns.point||{};
 			point.event=mm.event;

@@ -36,6 +36,7 @@ function screenToImage(x, y, imgTrans){
 	return {x: imgPt[0], y:imgPt[1]};
 }
 
+
 function imageToScreen(x, y, trans){
 	
 	var imgPt = [x, y, 1];
@@ -45,6 +46,33 @@ function imageToScreen(x, y, trans){
 	screenPt[1] = trans[1][0]*imgPt[0] + trans[1][1]*imgPt[1]+trans[1][2]*imgPt[2];
 
 	return {x: screenPt[0], y: screenPt[1]};
+}
+
+function onlayerDrag(arg){
+	var rect = jc('#idRect');
+	var pt = rect.position();
+	
+	var layer = jc.layer('imgLayer');
+	var trans = layer.transform();
+	var relativePt = screenToImage(pt.x, pt.y, trans);
+	
+	log("x:" +pt.x+", y:"+pt.y);
+	log3("img x:" +relativePt.x+", y:"+relativePt.y);
+}
+
+function setImgLayerDraggable(draggable){
+	var c1 = document.getElementById('c1');
+	
+	jc.layer('imgLayer').draggable({
+		disabled: !draggable,
+		drag:onlayerDrag,
+		start:function(arg){
+			c1.style.cursor = "move";
+		},
+		stop:function(arg){
+			c1.style.cursor = "default";
+		}
+	}).down('bottom');
 }
 
 window.onload = function(){
@@ -58,6 +86,8 @@ window.onload = function(){
 		jc.start('c1', true);
 		jc.image(img).id('idImg').layer('imgLayer');
 		
+		setImgLayerDraggable(true);
+		
 		jc.text("", 10, 10).id('txtLabel');
 		jc.text('', 500, 10).id('txtLabel2');
 		jc.text('', 10, 30).id('txtLabel3');
@@ -65,17 +95,6 @@ window.onload = function(){
 		
 		//draw test rect
 		jc.rect(50, 50, 100, 30).id('idRect').layer('imgLayer').dblclick(onDblClickTestRect);
-		
-		jc.layer('imgLayer').draggable({drag:onlayerDrag, 
-			start:function(arg){
-				c1.style.cursor = "move";
-				log2('start drag');
-			},
-			stop:function(arg){
-				c1.style.cursor = "default";
-				log2('stop drag');
-			}
-		}).down('bottom');
 		
 		$("#btnRect").on('click', drawRect);	
 		$("#btnRotate").on("click", onRotate);
@@ -102,12 +121,14 @@ function onCanvasScale(evt){
 
 function onDblClickTestRect(){
 	this.visible(false);
+	var c1 = document.getElementById('c1');
 	
 	jc.start('c1', true);
 	
 	var tmpLayer = jc.layer('tmpLayer');
 	tmpLayer.draggable({disabled:true});
-	jc.layer('imgLayer').draggable({disabled: true});
+	
+	setImgLayerDraggable(false);
 	
 	//note the transform sequence, transform return {[1,3,5],[2,4,6]}, but the parameter needs(1, 2, 3, 4, 5, 6)
 	var transImg = jc.layer('imgLayer').transform();
@@ -118,11 +139,118 @@ function onDblClickTestRect(){
 	
 	//var rect = this.getRect(); //screen point
 	var startPos = {x:this._x, y:this._y};//imageToScreen(this._x, this._y, transImg);
-	//this._width += 20;
-	//this._height += 20;
-	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect).draggable();
-	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)').draggable();
+	
+	jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
+	jc.circle(startPos.x,startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)');
+	
+	var lblPos = {};
+	lblPos.x = startPos.x + 5;
+	lblPos.y = startPos.y - 10;
+	jc.text('办证137xxxx', lblPos.x, lblPos.y).id('txtMockLabel').layer('tmpLayer').color('rgba(255,0,0,1)');
+	
+	var mockRect = jc('#idRectMock');
+	var mockCircle = jc('#circleStart');
+	var lbl = jc('#txtMockLabel');
+	
+	var lastLblPos = {};
+	lbl.draggable({
+		disabled: false,
+		start: function(){
+			c1.style.cursor = "move";
+			lastLblPos = {};
+		},
+		stop:function(){
+			c1.style.cursor = "default";
+			lastLblPos = {};
+		},
+		drag:function(arg){
+			var ptImg = screenToImage(arg.x, arg.y, transTmp);
+			if (typeof(lastLblPos.x) != 'undefined') {
 
+				var deltaXImg = ptImg.x - lastLblPos.x;
+				var deltaYImg = ptImg.y - lastLblPos.y;
+				
+				this.translate(deltaXImg, deltaYImg);
+			}
+			
+			lastLblPos = {
+				x: ptImg.x,
+				y: ptImg.y
+			};
+			
+			return true;
+		}
+	});
+	
+	var lastMockRectPos = {};
+	mockRect.draggable({
+		start:function(arg){
+			c1.style.cursor = "move";
+			lastMockRectPos = {};
+		},
+		stop: function(arg){
+			c1.style.cursor = "default";
+			
+			var lastMockRectPos = {};
+		},
+		drag: function(arg){
+			
+			var ptImg = screenToImage(arg.x, arg.y, transTmp);
+			
+			if (typeof(lastMockRectPos.x) != 'undefined') {
+
+				var deltaXImg = ptImg.x - lastMockRectPos.x;
+				var deltaYImg = ptImg.y - lastMockRectPos.y;
+				
+				this.translate(deltaXImg, deltaYImg);
+				mockCircle.translate(deltaXImg, deltaYImg);
+				lbl.translate(deltaXImg, deltaYImg);
+			}
+			
+			lastMockRectPos = {
+				x: ptImg.x,
+				y: ptImg.y
+			};
+			
+			return true;
+		}
+	});
+	
+	
+	var lastCirclePos = {};
+	mockCircle.draggable({
+		start:function(arg){
+			c1.style.cursor = "crosshair";
+			lastCirclePos = {};
+		},
+		stop: function(arg){
+			c1.style.cursor = "default";
+			lastCirclePos = {};
+		},
+		drag: function(arg){
+			var ptImg = screenToImage(arg.x, arg.y, transTmp);
+			
+			if (typeof(lastCirclePos.x) != 'undefined') {
+
+				var deltaX = ptImg.x - lastCirclePos.x;
+				var deltaY = ptImg.y - lastCirclePos.y;
+				
+				mockRect.translate(deltaX, deltaY);
+				lbl.translate(deltaX, deltaY);
+				mockRect._width -= deltaX;
+				mockRect._height -= deltaY;
+				
+				this.translate(deltaX, deltaY);
+			}
+			
+			lastCirclePos = {
+				x: ptImg.x,
+				y: ptImg.y
+			};
+			
+			return true;
+		}
+	});
 }
 
 function onDblClickMockRect(){
@@ -139,20 +267,11 @@ function onDblClickMockRect(){
 	
 	originalRect.del();
 	jc.layer('tmpLayer').del();
-	jc.layer('imgLayer').draggable({disabled: false});
+	
+	setImgLayerDraggable(true);
 }
 
-function onlayerDrag(arg){
-	var rect = jc('#idRect');
-	var pt = rect.position();
-	
-	var layer = jc.layer('imgLayer');
-	var trans = layer.transform();
-	var relativePt = screenToImage(pt.x, pt.y, trans);
-	
-	log("x:" +pt.x+", y:"+pt.y);
-	log3("img x:" +relativePt.x+", y:"+relativePt.y);
-}
+
 
 function onRotate(){
 	jc.layer("imgLayer").rotate(45, 'center');
