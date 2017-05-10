@@ -15,7 +15,6 @@ function log4(txt) {
     jc('#txtLabel4').string(txt);
 }
 
-
 function screenToImage(x, y, imgTrans) {
 
     var imgPt = [0, 0, 1];
@@ -48,43 +47,22 @@ function imageToScreen(x, y, trans) {
     return { x: screenPt[0], y: screenPt[1] };
 }
 
-function onlayerDrag(arg) {
-    var rect = jc('#idRect');
-    var pt = rect.position();
 
-    var layer = jc.layer('imgLayer');
-    var trans = layer.transform();
-    var relativePt = screenToImage(pt.x, pt.y, trans);
-
-    log("x:" + pt.x + ", y:" + pt.y);
-    log3("img x:" + relativePt.x + ", y:" + relativePt.y);
-}
-
-function setImgLayerDraggable(draggable) {
-    var c1 = document.getElementById('c1');
-
-    jc.layer('imgLayer').draggable({
-        disabled: !draggable,
-        drag: onlayerDrag,
-        start: function (arg) {
-            c1.style.cursor = "move";
-        },
-        stop: function (arg) {
-            c1.style.cursor = "default";
-        }
-    }).down('bottom');
-}
+var theCanvas, canvasId = 'c1', theImage;
+var imgLayerId = 'imgLayer', workLayerId = 'workLayer';
+var jcImgLayer, jcWorkLayer;
 
 window.onload = function () {
-    var c1 = document.getElementById('c1');
-    c1.onmousewheel = onCanvasScale;
-    //var ogc = c1.getContext('2d');
+    theCanvas = document.getElementById(canvasId);
+    theCanvas.onmousewheel = onCanvasScale;
+    //var ogc = theCanvas.getContext('2d');
 
-    var img = new Image();
+    theImage = new Image();
 
-    img.onload = function () {
-        jc.start('c1', true);
-        jc.image(img).id('idImg').layer('imgLayer');
+    theImage.onload = function () {
+        jc.start(canvasId, true);
+        jc.image(theImage).id('idImg').layer(imgLayerId);
+        jcImgLayer = jc.layer(imgLayerId);
 
         setImgLayerDraggable(true);
 
@@ -94,7 +72,7 @@ window.onload = function () {
         jc.text('', 500, 30).id('txtLabel4');
 
         //draw test rect
-        jc.rect(50, 50, 100, 30).id('idRect').layer('imgLayer').dblclick(onDblClickTestRect);
+        jc.rect(50, 50, 100, 30).id('idRect').layer(imgLayerId).dblclick(onDblClickTestRect);
 
         $("#btnRect").on('click', drawRect);
         $("#btnRotate").on("click", onRotate);
@@ -102,9 +80,32 @@ window.onload = function () {
         $("#btnReset").on("click", onReset);
     }
 
-    img.src = imageUrl;
+    theImage.src = imageUrl;
+}
+function onlayerDrag(arg) {
+    var rect = jc('#idRect');
+    var pt = rect.position();
+
+    var trans = jcImgLayer.transform();
+    var relativePt = screenToImage(pt.x, pt.y, trans);
+
+    log("x:" + pt.x + ", y:" + pt.y);
+    log3("img x:" + relativePt.x + ", y:" + relativePt.y);
 }
 
+function setImgLayerDraggable(draggable) {
+
+    jcImgLayer.draggable({
+        disabled: !draggable,
+        drag: onlayerDrag,
+        start: function (arg) {
+            theCanvas.style.cursor = "move";
+        },
+        stop: function (arg) {
+            theCanvas.style.cursor = "default";
+        }
+    }).down('bottom');
+}
 
 function onCanvasScale(evt) {
     var scaleValue = 1;
@@ -116,37 +117,32 @@ function onCanvasScale(evt) {
         scaleValue = 1.1;
     }
 
-    jc.layer('imgLayer').scale(scaleValue);
+    jcImgLayer.scale(scaleValue);
 }
 
 function onDblClickTestRect() {
     this.visible(false);
-    var c1 = document.getElementById('c1');
 
-    jc.start('c1', true);
-
-    var tmpLayer = jc.layer('tmpLayer');
-    tmpLayer.draggable({ disabled: true });
+    jcWorkLayer = jc.layer(workLayerId).up('top').draggable({ disabled: true });
 
     setImgLayerDraggable(false);
 
     //note the transform sequence, transform return {[1,3,5],[2,4,6]}, but the parameter needs(1, 2, 3, 4, 5, 6)
-    var transImg = jc.layer('imgLayer').transform();
+    var transImg = jcImgLayer.transform();
     var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6 = transImg[1][2];
 
-    tmpLayer.transform(n1, n2, n3, n4, n5, n6);
-    var transTmp = tmpLayer.transform();
+    jcWorkLayer.transform(n1, n2, n3, n4, n5, n6);
+    var transTmp = jcWorkLayer.transform();
 
-    //var rect = this.getRect(); //screen point
-    var startPos = { x: this._x, y: this._y };//imageToScreen(this._x, this._y, transImg);
+    var startPos = { x: this._x, y: this._y };
 
-    jc.rect(startPos.x, startPos.y, this._width, this._height).layer('tmpLayer').id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
-    jc.circle(startPos.x, startPos.y, 5).layer('tmpLayer').id('circleStart').color('rgba(255,0,0,1)');
+    jc.rect(startPos.x, startPos.y, this._width, this._height).layer(workLayerId).id('idRectMock').color('rgba(255,0,0,1)').dblclick(onDblClickMockRect);
+    jc.circle(startPos.x, startPos.y, 5).layer(workLayerId).id('circleStart').color('rgba(255,0,0,1)');
 
     var lblPos = {};
     lblPos.x = startPos.x + 5;
     lblPos.y = startPos.y - 10;
-    jc.text('办证137xxxx', lblPos.x, lblPos.y).id('txtMockLabel').layer('tmpLayer').color('rgba(255,0,0,1)');
+    jc.text('办证137xxxx', lblPos.x, lblPos.y).id('txtMockLabel').layer(workLayerId).color('rgba(255,0,0,1)');
 
     var mockRect = jc('#idRectMock');
     var mockCircle = jc('#circleStart');
@@ -156,11 +152,11 @@ function onDblClickTestRect() {
     lbl.draggable({
         disabled: false,
         start: function () {
-            c1.style.cursor = "move";
+            theCanvas.style.cursor = "move";
             lastLblPos = {};
         },
         stop: function () {
-            c1.style.cursor = "default";
+            theCanvas.style.cursor = "default";
             lastLblPos = {};
         },
         drag: function (arg) {
@@ -185,11 +181,11 @@ function onDblClickTestRect() {
     var lastMockRectPos = {};
     mockRect.draggable({
         start: function (arg) {
-            c1.style.cursor = "move";
+            theCanvas.style.cursor = "move";
             lastMockRectPos = {};
         },
         stop: function (arg) {
-            c1.style.cursor = "default";
+            theCanvas.style.cursor = "default";
 
             var lastMockRectPos = {};
         },
@@ -220,11 +216,11 @@ function onDblClickTestRect() {
     var lastCirclePos = {};
     mockCircle.draggable({
         start: function (arg) {
-            c1.style.cursor = "crosshair";
+            theCanvas.style.cursor = "crosshair";
             lastCirclePos = {};
         },
         stop: function (arg) {
-            c1.style.cursor = "default";
+            theCanvas.style.cursor = "default";
             lastCirclePos = {};
         },
         drag: function (arg) {
@@ -255,18 +251,17 @@ function onDblClickTestRect() {
 
 function onDblClickMockRect() {
 
-    jc.start('c1', true);
-
     var originalRect = jc('#idRect');
     var mockRect = jc('#idRectMock');
 
     //var rect = this.getRect();
 
-    var startPos = { x: this._transformdx + originalRect._x, y: this._transformdy + originalRect._y };//screenToImage(this._x, this._y, jc.layer('imgLayer').transform());
-    jc.rect(startPos.x, startPos.y, this._width, this._height).layer('imgLayer').dblclick(onDblClickTestRect).id('idRect');
+    var startPos = { x: this._transformdx + originalRect._x, y: this._transformdy + originalRect._y };//screenToImage(this._x, this._y, jc.layer(imgLayerId).transform());
+    jc.rect(startPos.x, startPos.y, this._width, this._height).layer(imgLayerId).dblclick(onDblClickTestRect).id('idRect');
 
     originalRect.del();
-    jc.layer('tmpLayer').del();
+    jcWorkLayer.del();
+    jcWorkLayer = undefined;
 
     setImgLayerDraggable(true);
 }
@@ -274,20 +269,20 @@ function onDblClickMockRect() {
 
 
 function onRotate() {
-    jc.layer("imgLayer").rotate(45, 'center');
+    jcImgLayer.rotate(30, 'center');
 
 }
 
 function onScale(evt) {
-    jc.layer('imgLayer').scale(1.1);
+    jcImgLayer.scale(1.1);
 }
 
 function drawRect() {
-    jc.start('c1', true);
-    jc.rect(100, 100, 100, 30).layer('imgLayer');
+    jc.start(canvasId, true);
+    jc.rect(100, 100, 100, 30).layer(imgLayerId);
 }
 
 function onReset() {
-    var imgLayer = jc.layer('imgLayer');
+    var imgLayer = jc.layer(imgLayerId);
     imgLayer.transform(1, 0, 0, 1, 0, 0, true);
 }
