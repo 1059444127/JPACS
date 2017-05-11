@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<script type="text/javascript" src="js/jquery-3.2.1.min.js" ></script>
+		<script type="text/javascript" src="js/jCanvaScript.1.5.18.js" ></script>
+		<script type="text/javascript" src="js/annObjects.js" ></script>
+		<style>
+			canvas{
+				background-color: #F0F8FF;
+			}
+		</style>
+		<script>
+			window.onload = function(){
+				var imgViewer = new imageViewer();
+				imgViewer.initialize('c1', 'img/img1.jpg');
+				
+				imgViewer.onDragImage = function(arg){
+
+				}
+				
+				
+			}
+		</script>
+	</head>
+	<body>
+		<canvas id='c1' width="800" height="800"></canvas>
+	</body>
+</html>
