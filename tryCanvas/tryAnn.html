@@ -10,6 +10,10 @@
 			canvas{
 				background-color: #F0F8FF;
 			}
+			
+			.toolbarGroup input{
+				width: 75px;
+			}
 		</style>
 		<script>
 			window.onload = function(){
@@ -17,14 +21,37 @@
 				imgViewer.initialize('c1', 'img/img1.jpg');
 				
 				imgViewer.onDragImage = function(arg){
-
+					
 				}
 				
+				imgViewer.addRect(10, 10, 100, 30);
 				
+				$('#btnAddRect').on('click', function(){
+					var aRect = imgViewer.addRect(30, 30, 50, 50);
+				});
+				
+				$('#btnSelect').on('click', function(){
+					imgViewer.setSelectModel();
+				});
+				
+				$('#btnPan').on('click', function(){
+					imgViewer.setPanModel();
+				});
 			}
 		</script>
 	</head>
 	<body>
-		<canvas id='c1' width="800" height="800"></canvas>
+		<div>
+			<table class='toolbarGroup'>
+				<tr>
+					<td><input id='btnAddRect' type="button" value='Rect'></td>
+					<td><input id='btnSelect' type="button" value='Select'></td>
+					<td><input id='btnPan' type="button" value='Pan'></td>
+				</tr>
+			</table>
+		</div>
+		<div>
+			<canvas id='c1' width="800" height="800"></canvas>
+		</div>
 	</body>
 </html>

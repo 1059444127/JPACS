@@ -3253,7 +3253,7 @@ jCanvaScript.canvas = function(idCanvas)
 				var drag=optns.drag,
 					dobject=drag.object;
 				
-				var doneDrag = true;
+				var doneDrag = false;
 				if(drag.drag)
 				{
 					doneDrag = drag.drag.call(dobject,{x:mm.x,y:mm.y});
