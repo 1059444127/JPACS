@@ -1,5 +1,7 @@
 # JPACS
 
+An excercize project which using fo-dicom, Canvas, jQuery, jCanvaScript to build a simple Dicom Web PACS. 
+
 ## Road map
 
 ### Phase 1: prototype and research
