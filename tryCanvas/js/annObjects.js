@@ -7,6 +7,65 @@
  */
 (function(window, undefined){
 	
+	var workContext = {};
+	workContext.Pan = 1;
+	workContext.SelectAnnObj= 2;
+	//workContext.Edit = 3;
+
+	var dCanvas;		//the dom canvas object
+	var dImg;			//the dom image object
+	var jcImgLayer;		//the jc image layer object
+	var jcWorkLayer;	//the jc temp working layer
+	
+	var imgLayerId = 'imgLayer';
+	var imgId = 'idImg';
+	
+	//colors
+	var colorWhite = '#ffffff';
+	var colorRed = '#ff0000';
+	
+	//current image viewer working model
+	var curContext = workContext.Pan;
+	
+	var annObjects = new Array();		//the container include all annotation objects
+	var isReady = false;				//indicate whether image is loaded, and ready to draw annotation objects.
+	var curSelectObj = undefined;
+	
+	function selectAnnObject(obj){
+		
+		if(obj && obj instanceof annObject){
+			
+			curSelectObj = obj;
+			
+			//set all other obj not in edit status
+			annObjects.forEach(function(otherObj){
+				if(otherObj !== obj){
+					otherObj.setEdit(false);
+				}
+				else{
+					otherObj.setEdit(true);
+				}
+			});
+		}
+		else{
+			curSelectObj = undefined;
+			
+			annObjects.forEach(function(otherObj){
+				otherObj.setEdit(false);
+			});
+		}
+	}
+	
+	function onImgLayerMousedown(arg){
+		//if in select context, and not click any object, will unselect all objects.
+		if(!arg.event.cancelBubble && curContext == workContext.SelectAnnObj){
+			//selectAnnObject(undefined);
+			if(curSelectObj && curSelectObj.setEdit){
+				curSelectObj.setEdit(false);
+			}
+		}
+	}
+	
 	function screenToImage(x, y, imgTrans){
 	
 		var imgPt = [0,0,1];
@@ -36,35 +95,20 @@
 	
 		return {x: screenPt[0], y: screenPt[1]};
 	}
-
+	
 	var curId = 1;
 	function newId(){
 		curId++;
 		return "annObj_"+curId;
 	}
-
-	var viewModel = {};
-	viewModel.Pan = 1;
-	viewModel.Select = 2;
-	viewModel.Edit = 3;
-
-	var dCanvas;		//the dom canvas object
-	var dImg;			//the dom image object
-	var jcImgLayer;		//the jc image layer object
-	var jcWorkLayer;	//the jc temp working layer
 	
-	var annObjects = new Array();		//the container include all annotation objects
-	var isReady = false;				//indicate whether image is loaded, and ready to draw annotation objects.
+	/*********************************
+	 * the annRect class
+	 */
 	
-	var imgLayerId = 'imgLayer';
-	var imgId = 'idImg';
-	
-	//current image viewer working model
-	var curModel = viewModel.Pan;
-	
-	//defined the imageViewer class
 	function imageViewer(){
-
+		this.annObjectList = annObjects;
+		this.isReady = isReady;
 	}
 	
 	imageViewer.prototype.initialize = function(canvasId, imgSrc){
@@ -77,14 +121,16 @@
 			jc.start(canvasId, true);
 			
 			jcImgLayer = jc.layer(imgLayerId).down('bottom');
+			jcImgLayer.mousedown(onImgLayerMousedown);
+			
 			jc.image(dImg).id(imgId).layer(imgLayerId);
 			
 			imgViewer.draggable(true);
-			isReady = true;
+			imgViewer.isReady = true;
 			
 			//create objects added before image be loaded
-			if(annObjects.length > 0){			
-				annObjects[0].create();
+			if(imgViewer.annObjectList.length > 0){			
+				imgViewer.annObjectList[0].create();
 			}
 		}
 		
@@ -106,36 +152,46 @@
 	}
 	
 	imageViewer.prototype.setSelectModel = function(){
-		curModel = viewModel.Select;
+		curContext = workContext.SelectAnnObj;
 		
 		this.draggable(false);
 		//dCanvas.style.cursor = 'pointer';
 	}
 	
 	imageViewer.prototype.setPanModel = function(){
-		curModel = viewModel.Pan;
+		curContext = workContext.Pan;
 		
 		this.draggable(true);
 		//dCanvas.style.cursor = 'default';
+		
+		selectAnnObject(undefined);
 	}
 	
 	imageViewer.prototype.addRect = function(x, y, width, height){
 		var aRect = new annRect(x, y, width, height);
-		annObjects.push(aRect);
+		this.annObjectList.push(aRect);
 		
-		if(isReady){
+		if(this.isReady){
 			aRect.create();
 		}
 		
 		return aRect;
 	}
 	
-	//the base class
+	/*********************************
+	 * the annRect class
+	 */
+
 	function annObject(){
-		
+		this.isInEdit = false;
+		this.id = "";
 	}
 	
-	//the annRect class
+	
+	/*********************************
+	 * the annRect class
+	 */
+	
 	function annRect(x, y, width, height){
 		annObject.call(this);
 		
@@ -149,37 +205,59 @@
 	
 	annRect.prototype.create = function(){
 		var rectId = newId();
-		jc.rect(this.x, this.y, this.width, this.height).layer(imgLayerId).id(rectId);
+		this.id = rectId;
+		
+		jc.rect(this.x, this.y, this.width, this.height).layer(imgLayerId).id(rectId).color(colorWhite);
 		this.jcRect = jc('#'+ rectId);
 		
+		var aRect = this;
+		
 		this.jcRect.mouseover(function(){
-			if(curModel == viewModel.Select)
+			if(curContext == workContext.SelectAnnObj)
 				dCanvas.style.cursor = 'pointer';
 		});
 		
 		this.jcRect.mouseout(function(){
-			if(curModel == viewModel.Select)
+			if(curContext == workContext.SelectAnnObj)
 				dCanvas.style.cursor = 'default';
 		});
 		
-		this.jcRect.click(function(){
-			if(curModel == viewModel.Select){
-				curModel = viewModel.Edit;
-				this.draggable({disabled:false});
+		this.jcRect.mousedown(function(arg){
+			if(curContext == workContext.SelectAnnObj){
+				selectAnnObject(aRect);
 				
-				this.color('#ff0000');
+				arg.event.cancelBubble = true;
 			}
 		});
 	}
 	
-	annRect.prototype.edit = function(){
-
-		this.jcStartCircle = undefined;
-		this.jcRect = undefined;
-		this.jcLable = undefined;
+	annRect.prototype.setEdit = function(edit){
+		this.isInEdit = edit;
+		
+		if(edit){
+			this.jcRect.color(colorRed);
+			this.setDraggable(true);
+			
+			//draw edit assit objects
+			//this.jcStartCircle = undefined;
+			//this.jcRect = undefined;
+			//this.jcLable = undefined;
+		}
+		else{
+			this.jcRect.color(colorWhite);
+			this.setDraggable(false)
+		}
 	}
 	
-	//the annLine class
+	annRect.prototype.setDraggable = function(draggable){
+		this.jcRect.draggable({disabled: !draggable});
+	}
+	
+	
+	/*********************************
+	 * the annLine class
+	 */
+	
 	function annLine(startX, startY, endX, endY){
 		annObject.call(this);
 	}
