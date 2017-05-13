@@ -17,26 +17,34 @@
 		</style>
 		<script>
 			window.onload = function(){
-				var imgViewer = new imageViewer();
-				imgViewer.initialize('c1', 'img/img1.jpg');
+				var v1 = new imageViewer();
+				v1.initialize('c1', 'img/img1.jpg');
 				
-				imgViewer.onDragImage = function(arg){
+				v1.onDragImage = function(arg){
 					
 				}
 				
-				imgViewer.addRect(10, 10, 100, 30);
+				v1.addRect(10, 10, 100, 30);
+				v1.addRect(20, 20, 100, 30);
 				
 				$('#btnAddRect').on('click', function(){
-					var aRect = imgViewer.addRect(30, 30, 50, 50);
+					var aRect = v1.addRect(30, 30, 50, 50);
 				});
 				
 				$('#btnSelect').on('click', function(){
-					imgViewer.setSelectModel();
+					v1.setSelectModel();
+					v2.setSelectModel();
 				});
 				
 				$('#btnPan').on('click', function(){
-					imgViewer.setPanModel();
+					v1.setPanModel();
+					v2.setPanModel();
 				});
+				
+				var v2 = new imageViewer();
+				v2.initialize('c2', 'img/img1.jpg');
+				
+				v2.addRect(10, 10, 50, 50);
 			}
 		</script>
 	</head>
@@ -51,7 +59,8 @@
 			</table>
 		</div>
 		<div>
-			<canvas id='c1' width="800" height="800"></canvas>
+			<canvas id='c1' width="400" height="400"></canvas>
+			<canvas id='c2' width="400" height="400"></canvas>
 		</div>
 	</body>
 </html>
