@@ -582,14 +582,8 @@
 					this.translate(deltaX, deltaY);
 					
 					aLine.ptStart = {x: this._x+this._transformdx, y:this._y+this._transformdy};
-					aLine.line.points([[aLine.ptStart.x, aLine.ptStart.y],[aLine.ptEnd.x, aLine.ptEnd.y]]);
 					
-					var ptMiddle = {};
-					ptMiddle.x = (aLine.ptStart.x + aLine.ptEnd.x) / 2;
-					ptMiddle.y = (aLine.ptStart.y + aLine.ptEnd.y) / 2;	
-					aLine.circleMiddle._x = ptMiddle.x;
-					aLine.circleMiddle._y = ptMiddle.y;
-					
+					aLine._reDraw();
 				}
 				
 				this._lastPos = {
@@ -620,13 +614,7 @@
 					this.translate(deltaX, deltaY);
 					aLine.ptEnd = {x: this._x+this._transformdx, y:this._y+this._transformdy};
 					
-					aLine.line.points([[aLine.ptStart.x, aLine.ptStart.y],[aLine.ptEnd.x, aLine.ptEnd.y]]);
-					
-					var ptMiddle = {};
-					ptMiddle.x = (aLine.ptStart.x + aLine.ptEnd.x) / 2;
-					ptMiddle.y = (aLine.ptStart.y + aLine.ptEnd.y) / 2;	
-					aLine.circleMiddle._x = ptMiddle.x;
-					aLine.circleMiddle._y = ptMiddle.y;
+					aLine._reDraw();
 				}
 				
 				this._lastPos = {
@@ -654,14 +642,14 @@
 					var deltaX = ptImg.x - this._lastPos.x;
 					var deltaY = ptImg.y - this._lastPos.y;
 					
-					this.translate(deltaX, deltaY);
+					//this.translate(deltaX, deltaY);
 					aLine.circleStart.translate(deltaX, deltaY);
 					aLine.circleEnd.translate(deltaX, deltaY);
 					
 					aLine.ptStart = {x: aLine.circleStart._x+aLine.circleStart._transformdx, y:aLine.circleStart._y+aLine.circleStart._transformdy};
 					aLine.ptEnd = {x: aLine.circleEnd._x+aLine.circleEnd._transformdx, y:aLine.circleEnd._y+aLine.circleEnd._transformdy};
 					
-					aLine.line.points([[aLine.ptStart.x, aLine.ptStart.y],[aLine.ptEnd.x, aLine.ptEnd.y]]);
+					aLine._reDraw();
 				}
 				
 				this._lastPos = {
@@ -674,6 +662,17 @@
 		});
 	}
 	
+	annLine.prototype._reDraw = function(){
+		this.line.points([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]);
+		
+		var ptMiddle = {};
+		ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
+		ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;	
+		this.circleMiddle._x = ptMiddle.x;
+		this.circleMiddle._y = ptMiddle.y;
+		this.circleMiddle._transformdx = 0;
+		this.circleMiddle._transformdy = 0;
+	}
 	
 	//export definitiens
 	window.dicomViewer = dicomViewer;
