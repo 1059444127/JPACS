@@ -5,30 +5,34 @@
 		<title></title>
 		<script type="text/javascript" src="js/jquery-3.2.1.min.js" ></script>
 		<script type="text/javascript" src="js/jCanvaScript.1.5.18.js" ></script>
-		<script type="text/javascript" src="js/annObjects.js" ></script>
+		<script type="text/javascript" src="js/dicomViewer.js" ></script>
 		<style>
 			canvas{
 				background-color: #F0F8FF;
 			}
 			
 			.toolbarGroup input{
-				width: 75px;
+				width: 50px;
 			}
 		</style>
 		<script>
 			window.onload = function(){
-				var v1 = new imageViewer();
+				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg');
 				
 				v1.onDragImage = function(arg){
 					
 				}
 				
-				v1.addRect(10, 10, 100, 30);
-				v1.addRect(20, 20, 100, 30);
+				//v1.addRect(10, 10, 100, 30);
+				//v1.addRect(20, 20, 100, 30);
 				
 				$('#btnAddRect').on('click', function(){
 					var aRect = v1.addRect(30, 30, 50, 50);
+				});
+				
+				$('#btnAddLine').on('click', function(){
+					var aRect = v1.addLine(30, 30, 50, 50);
 				});
 				
 				$('#btnSelect').on('click', function(){
@@ -41,7 +45,7 @@
 					v2.setPanModel();
 				});
 				
-				var v2 = new imageViewer();
+				var v2 = new dicomViewer();
 				v2.initialize('c2', 'img/img1.jpg');
 				
 				v2.addRect(10, 10, 50, 50);
@@ -52,9 +56,11 @@
 		<div>
 			<table class='toolbarGroup'>
 				<tr>
-					<td><input id='btnAddRect' type="button" value='Rect'></td>
 					<td><input id='btnSelect' type="button" value='Select'></td>
 					<td><input id='btnPan' type="button" value='Pan'></td>
+					<td><input id='btnRotate' type="button" value='Rotate'></td>
+					<td><input id='btnAddRect' type="button" value='Rect'></td>
+					<td><input id='btnAddLine' type="button" value='Line'></td>
 				</tr>
 			</table>
 		</div>
