@@ -46,11 +46,6 @@
 		return {x: screenPt[0], y: screenPt[1]};
 	}
 	
-	//give two point, get the middle point of the line
-	function getMiddlePoint(startX, startY, endX, endY){
-		
-	}
-	
 	var globalViewerId = 1;
 	function newViewerId(){
 		globalViewerId++;
@@ -238,6 +233,72 @@
 		this.id = "";
 	}
 	
+	//set child jcObject's common mouse event hander, etc.
+	annObject.prototype._setMouseEvent = function(jcObj, overStyle){
+		var dv = this.parent;
+		var annObj = this;
+		
+		if(!overStyle){
+			overStyle='pointer';
+		}
+		
+		jcObj.mouseover(function(arg){
+			if(dv.curContext == workContext.Select)
+				dv.canvas.style.cursor = overStyle;
+		});
+		
+		jcObj.mouseout(function(){
+			if(dv.curContext == workContext.Select)
+				dv.canvas.style.cursor = 'default';
+		});
+		
+		jcObj.mousedown(function(arg){
+			if(dv.curContext == workContext.Select){
+				dv.selectObject(annObj);
+				
+				arg.event.cancelBubble = true;
+			}
+		});		
+	}
+	
+	annObject.prototype._setDraggable = function(jcObj, draggable, onDrag){
+		var dv = this.parent;
+		var annObj = this;
+		var transTmp = dv.imgLayer.transform();
+		
+		jcObj.draggable({
+			disabled: !draggable,
+			start: function(arg){
+				this._lastPos = {};
+			},
+			stop: function(arg){
+				this._lastPos = {};
+			},
+			drag: function(arg){
+				var ptImg = screenToImage(arg.x, arg.y, transTmp);
+				
+				if (typeof(this._lastPos.x) != 'undefined') {
+	
+					var deltaX = ptImg.x - this._lastPos.x;
+					var deltaY = ptImg.y - this._lastPos.y;
+					
+					this.translate(deltaX, deltaY);
+					
+					if(onDrag){
+						onDrag.call(annObj, deltaX, deltaY);
+					}
+				}
+				
+				this._lastPos = {
+					x: ptImg.x,
+					y: ptImg.y
+				};
+				
+				return true;
+			}
+		});
+	}
+	
 	/*********************************
 	 * the annRect class
 	 */
@@ -266,48 +327,15 @@
 		
 		//handle rect events
 		var aRect = this;
-		
-		this.rect.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'pointer';
-		});
-		
-		this.rect.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.rect.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aRect);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
-		
+		this._setMouseEvent(this.rect);
+
 		//draw label text
 		var idLbl = this.id+"_lbl";
 		var lblPos = {x:this.x+5, y:this.y-5};
 		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
 		this.label = jc('#'+idLbl);
 		
-		this.label.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'pointer';
-		});
-		
-		this.label.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.label.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aRect);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
+		this._setMouseEvent(this.label);
 		
 		//draw assit objects
 		var idCircleA = this.id+"_aCircle";
@@ -315,23 +343,7 @@
 		this.circleA = jc("#"+idCircleA);
 		this.circleA.visible(false);
 		
-		this.circleA.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'nw-resize';
-		});
-		
-		this.circleA.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.circleA.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aRect);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
+		this._setMouseEvent(this.circleA, 'nw-resize');
 	}
 	
 	annRect.prototype.setEdit = function(edit){
@@ -353,97 +365,20 @@
 		var aRect = this;
 		var transTmp = this.parent.imgLayer.transform();
 		
-		this.rect.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag: function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
-					
-					this.translate(deltaX, deltaY);
-					aRect.circleA.translate(deltaX, deltaY);
-					aRect.label.translate(deltaX, deltaY);
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
+		this._setDraggable(this.rect, draggable, function(deltaX, deltaY){
+			aRect.circleA.translate(deltaX, deltaY);
+			aRect.label.translate(deltaX, deltaY);
 		});
 		
-		this.circleA.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag:function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
-					
-					this.translate(deltaX, deltaY);
-					
-					aRect.rect.translate(deltaX, deltaY);
-					aRect.rect._width -= deltaX;
-					aRect.rect._height -= deltaY;
-					
-					aRect.label.translate(deltaX, deltaY);
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
+		this._setDraggable(this.circleA, draggable, function(deltaX, deltaY){
+			aRect.rect.translate(deltaX, deltaY);
+			aRect.rect._width -= deltaX;
+			aRect.rect._height -= deltaY;
+			
+			aRect.label.translate(deltaX, deltaY);			
 		});
 		
-		this.label.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag:function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
-					
-					this.translate(deltaX, deltaY);
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
-		});
+		this._setDraggable(this.label, draggable);
 	}
 	
 	/*********************************
@@ -484,61 +419,22 @@
 		jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colorWhite).opacity(0);
 		this.circleMiddle = jc('#'+idCircleM);
 		
-		var aLine = this;
+		var idLbl = this.id+'_lbl';
+		var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
+		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
+		this.label = jc('#'+idLbl);
 		
-		this.circleStart.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'pointer';
-		});
+		var idLblLine = this.id+'_lblLine';
+		var ptLblCenter = this.label.getCenter();
+		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
+		ptLblCenter.y+= 15;
+		jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
+		this.lableLine = jc('#'+idLblLine);
 		
-		this.circleStart.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.circleStart.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aLine);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
-		
-		this.circleEnd.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'pointer';
-		});
-		
-		this.circleEnd.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.circleEnd.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aLine);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
-				
-		this.circleMiddle.mouseover(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'pointer';
-		});
-		
-		this.circleMiddle.mouseout(function(){
-			if(dv.curContext == workContext.Select)
-				dv.canvas.style.cursor = 'default';
-		});
-		
-		this.circleMiddle.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
-				dv.selectObject(aLine);
-				
-				arg.event.cancelBubble = true;
-			}
-		});
+		this._setMouseEvent(this.circleStart);
+		this._setMouseEvent(this.circleEnd);
+		this._setMouseEvent(this.circleMiddle, 'nw-resize');
+		this._setMouseEvent(this.label);
 	}
 	
 	annLine.prototype.setEdit = function(edit){
@@ -547,12 +443,16 @@
 		
 		if(edit){
 			this.line.color(colorRed);
+			this.label.color(colorRed);
+			this.lableLine.color(colorRed);
 			this.circleStart.color(colorRed).opacity(1);
 			this.circleEnd.color(colorRed).opacity(1);
-			this.circleMiddle.color(colorRed).opacity(1);
+			this.circleMiddle.color(colorRed).opacity(1);	
 		}
 		else{
 			this.line.color(colorWhite);
+			this.label.color(colorWhite);
+			this.lableLine.color(colorWhite);
 			this.circleStart.color(colorWhite).opacity(0);
 			this.circleEnd.color(colorWhite).opacity(0);
 			this.circleMiddle.color(colorWhite).opacity(0);
@@ -563,106 +463,42 @@
 		var aLine = this;
 		var transTmp = this.parent.imgLayer.transform();
 		
-		this.circleStart.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag:function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
+		var cs = aLine.circleStart;
+		var ce = aLine.circleEnd;
+		var cm = aLine.circleMiddle;
+		var lbl = aLine.label;
+		
+		this._setDraggable(cs, draggable, function(deltaX, deltaY){
+			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};
 					
-					this.translate(deltaX, deltaY);
-					
-					aLine.ptStart = {x: this._x+this._transformdx, y:this._y+this._transformdy};
-					
-					aLine._reDraw();
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
+			aLine._reDraw();		
 		});
 		
-		this.circleEnd.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag:function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
+		this._setDraggable(ce, draggable, function(deltaX, deltaY){
+			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
 					
-					this.translate(deltaX, deltaY);
-					aLine.ptEnd = {x: this._x+this._transformdx, y:this._y+this._transformdy};
-					
-					aLine._reDraw();
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
+			aLine._reDraw();
 		});
 		
-		this.circleMiddle.draggable({
-			disabled: !draggable,
-			start: function(arg){
-				this._lastPos = {};
-			},
-			stop: function(arg){
-				this._lastPos = {};
-			},
-			drag:function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
-				
-				if (typeof(this._lastPos.x) != 'undefined') {
-	
-					var deltaX = ptImg.x - this._lastPos.x;
-					var deltaY = ptImg.y - this._lastPos.y;
-					
-					//this.translate(deltaX, deltaY);
-					aLine.circleStart.translate(deltaX, deltaY);
-					aLine.circleEnd.translate(deltaX, deltaY);
-					
-					aLine.ptStart = {x: aLine.circleStart._x+aLine.circleStart._transformdx, y:aLine.circleStart._y+aLine.circleStart._transformdy};
-					aLine.ptEnd = {x: aLine.circleEnd._x+aLine.circleEnd._transformdx, y:aLine.circleEnd._y+aLine.circleEnd._transformdy};
-					
-					aLine._reDraw();
-				}
-				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
-				return true;
-			}
+		this._setDraggable(cm, draggable, function(deltaX, deltaY){
+			cm.translate(-deltaX, -deltaY);
+			
+			cs.translate(deltaX, deltaY);
+			ce.translate(deltaX, deltaY);
+			
+			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};
+			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
+			
+			aLine._reDraw();
+		});
+		
+		this._setDraggable(lbl, draggable, function(deltaX, deltaY){
+			aLine._reDraw();
 		});
 	}
 	
 	annLine.prototype._reDraw = function(){
+		var dv = this.parent;
 		this.line.points([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]);
 		
 		var ptMiddle = {};
@@ -672,6 +508,11 @@
 		this.circleMiddle._y = ptMiddle.y;
 		this.circleMiddle._transformdx = 0;
 		this.circleMiddle._transformdy = 0;
+		
+		var ptLblCenter = this.label.getCenter();
+		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
+		ptLblCenter.y+= 15;
+		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y]]);
 	}
 	
 	//export definitiens
