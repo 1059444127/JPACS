@@ -46,6 +46,10 @@
 		return {x: screenPt[0], y: screenPt[1]};
 	}
 	
+	function countDistance(x1, y1, x2, y2){
+		var t = (x1-x2);
+	}
+	
 	var globalViewerId = 1;
 	function newViewerId(){
 		globalViewerId++;
@@ -428,12 +432,12 @@
 		var ptLblCenter = this.label.getCenter();
 		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
 		ptLblCenter.y+= 15;
-		jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
+		jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
 		this.lableLine = jc('#'+idLblLine);
 		
-		this._setMouseEvent(this.circleStart);
-		this._setMouseEvent(this.circleEnd);
-		this._setMouseEvent(this.circleMiddle, 'nw-resize');
+		this._setMouseEvent(this.circleStart, 'crosshair');
+		this._setMouseEvent(this.circleEnd, 'crosshair');
+		this._setMouseEvent(this.circleMiddle, 'crosshair');
 		this._setMouseEvent(this.label);
 	}
 	
@@ -512,7 +516,7 @@
 		var ptLblCenter = this.label.getCenter();
 		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
 		ptLblCenter.y+= 15;
-		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y]]);
+		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y - 5]]);
 	}
 	
 	//export definitiens
