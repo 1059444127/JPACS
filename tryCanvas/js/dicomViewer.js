@@ -154,6 +154,16 @@
 	}
 	
 	dicomViewer.prototype.onContextMenu = function(evt){
+		
+		if(this.curContext == viewContext.create){
+			if(this.curSelectObj){
+				this.curSelectObj.delete();
+				this.curSelectObj = undefined;
+			}
+			
+			this.setSelectModel();
+		}
+		
 		evt.stopImmediatePropagation();
 		evt.stopPropagation();
 		evt.preventDefault();
@@ -496,6 +506,31 @@
 		}
 		
 		return;
+	}
+	
+	annLine.prototype.delete = function(){
+		if(this.circleStart){
+			this.circleStart.del();
+			this.circleStart = undefined;
+		}
+		if(this.circleEnd){
+			this.circleEnd.del();
+			this.circleEnd = undefined;
+		}
+		if(this.circleMiddle){
+			this.circleMiddle.del();
+			this.circleMiddle = undefined;
+		}
+		if(this.label){
+			this.label.del();
+			this.label = undefined;
+		}
+		if(this.lableLine){
+			this.lableLine.del();
+			this.lableLine = undefined;
+		}
+		
+		this.isCreated = false;
 	}
 	
 	annLine.prototype.setEdit = function(edit){
