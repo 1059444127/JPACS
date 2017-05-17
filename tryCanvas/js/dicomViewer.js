@@ -8,9 +8,16 @@
 (function(window, undefined){
 	
 	var workContext = {};
-	workContext.Pan = 1;
-	workContext.Select= 2;
+	workContext.pan = 1;
+	workContext.select= 2;
 	//workContext.Edit = 3;
+
+	var stepEnum = {};
+	stepEnum.step1 = 1;
+	stepEnum.step2 = 2;
+	stepEnum.step3 = 3;
+	stepEnum.step4 = 4;
+	stepEnum.step5 = 5;
 
 	//colors
 	var colorWhite = '#ffffff';
@@ -67,7 +74,7 @@
 		this.dicomTagList = new Array();
 		
 		this.isReady = false;
-		this.curContext = workContext.Pan;
+		this.curContext = workContext.pan;
 		this.curSelectObj = undefined;
 		
 		this.imgLayerId = this.id +'_imgLayer';
@@ -99,9 +106,9 @@
 			dv.isReady = true;
 			
 			//create objects added before image be loaded
-			dv.annotationList.forEach(function(obj){
-				obj.create();
-			});
+//			dv.annotationList.forEach(function(obj){
+//				obj.create();
+//			});
 		}
 		
 		dImg.src = imgSrc;
@@ -114,7 +121,7 @@
 	
 	dicomViewer.prototype.onMouseDown = function(arg){
 		//if in select context, and not click any object, will unselect all objects.
-		if(!arg.event.cancelBubble && this.curContext == workContext.Select){
+		if(!arg.event.cancelBubble && this.curContext == workContext.select){
 			//Selectect(undefined);
 			if(this.curSelectObj && this.curSelectObj.setEdit){
 				this.curSelectObj.setEdit(false);
@@ -140,14 +147,14 @@
 	}
 	
 	dicomViewer.prototype.setSelectModel = function(){
-		this.curContext = workContext.Select;
+		this.curContext = workContext.select;
 		
 		this.draggable(false);
 		//canvas.style.cursor = 'pointer';
 	}
 	
 	dicomViewer.prototype.setPanModel = function(){
-		this.curContext = workContext.Pan;
+		this.curContext = workContext.pan;
 		
 		this.draggable(true);
 		//canvas.style.cursor = 'default';
@@ -195,9 +202,9 @@
 		return aRect;
 	}
 	
-	dicomViewer.prototype.addLine = function(startX, startY, endX, endY){
-		var aLine = new annLine(startX, startY, endX, endY);
-		aLine.parent = this;
+	dicomViewer.prototype.createLine = function(){
+		var aLine = new annLine(this);
+
 		this.annotationList.push(aLine);
 		
 		if(this.isReady){
@@ -231,9 +238,10 @@
 	 * the annObject class
 	 */
 
-	function annObject(){
-		this.parent = undefined;
+	function annObject(viewer){
+		this.parent = viewer;
 		this.isInEdit = false;
+		this.isCreated = false;
 		this.id = "";
 	}
 	
@@ -247,17 +255,17 @@
 		}
 		
 		jcObj.mouseover(function(arg){
-			if(dv.curContext == workContext.Select)
+			if(dv.curContext == workContext.select)
 				dv.canvas.style.cursor = overStyle;
 		});
 		
 		jcObj.mouseout(function(){
-			if(dv.curContext == workContext.Select)
+			if(dv.curContext == workContext.select)
 				dv.canvas.style.cursor = 'default';
 		});
 		
 		jcObj.mousedown(function(arg){
-			if(dv.curContext == workContext.Select){
+			if(dv.curContext == workContext.select){
 				dv.selectObject(annObj);
 				
 				arg.event.cancelBubble = true;
@@ -348,6 +356,7 @@
 		this.circleA.visible(false);
 		
 		this._setMouseEvent(this.circleA, 'nw-resize');
+		this.isCreated = true;
 	}
 	
 	annRect.prototype.setEdit = function(edit){
@@ -389,15 +398,28 @@
 	 * the annLine class
 	 */
 	
-	function annLine(startX, startY, endX, endY){
-		annObject.call(this);
+	function annLine(viewer){
+		annObject.call(this, viewer);
+		this.curStep = stepEnum.step1;
 		
-		this.ptStart = {x:startX, y:startY};
-		this.ptEnd = {x:endX, y:endY};
+		var obj = this;
+		viewer.imgLayer.click(function(arg){
+			obj.onMouseClick(arg);
+		});
+		
+		//this.ptStart = {x:startX, y:startY};
+		//this.ptEnd = {x:endX, y:endY};
+		
 		
 	}
 	
+	
+	
 	annLine.prototype = new annObject();
+	
+	annLine.prototype.onMouseClick(arg){
+		
+	}
 	
 	annLine.prototype.create = function(){
 		var dv = this.parent;

@@ -32,7 +32,8 @@
 				});
 				
 				$('#btnAddLine').on('click', function(){
-					var aLine = v1.addLine(30, 30, 50, 50);
+					var aLine = v1.createLine();
+					
 					
 				});
 				
@@ -49,7 +50,7 @@
 				var v2 = new dicomViewer();
 				v2.initialize('c2', 'img/img1.jpg');
 				
-				v2.addRect(10, 10, 50, 50);
+				//v2.addRect(10, 10, 50, 50);
 			}
 		</script>
 	</head>
