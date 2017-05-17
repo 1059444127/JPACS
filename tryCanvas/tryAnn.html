@@ -18,7 +18,9 @@
 		<script>
 			window.onload = function(){
 				var v1 = new dicomViewer();
-				v1.initialize('c1', 'img/img1.jpg');
+				v1.initialize('c1', 'img/img1.jpg', function(){
+					
+				});
 				
 				v1.onDragImage = function(arg){
 					
@@ -33,8 +35,7 @@
 				
 				$('#btnAddLine').on('click', function(){
 					var aLine = v1.createLine();
-					
-					
+
 				});
 				
 				$('#btnSelect').on('click', function(){

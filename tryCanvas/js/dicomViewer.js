@@ -7,10 +7,11 @@
  */
 (function(window, undefined){
 	
-	var workContext = {};
-	workContext.pan = 1;
-	workContext.select= 2;
-	//workContext.Edit = 3;
+	var viewContext = {};
+	viewContext.pan = 1;
+	viewContext.select = 2;
+	viewContext.create = 3;
+	//viewContext.Edit = 3;
 
 	var stepEnum = {};
 	stepEnum.step1 = 1;
@@ -74,41 +75,42 @@
 		this.dicomTagList = new Array();
 		
 		this.isReady = false;
-		this.curContext = workContext.pan;
+		this.curContext = viewContext.pan;
 		this.curSelectObj = undefined;
 		
 		this.imgLayerId = this.id +'_imgLayer';
 		this.imgId = this.id +'_imgId';
 		
-		this.curObjectId = 0;
+		this._objectId = 0;
 	}
 	
 	dicomViewer.prototype.newObjectId = function(){
-		this.curObjectId++;
-		return this.id + "_obj_" + this.curObjectId;	
+		this._objectId++;
+		return this.id + "_obj_" + this._objectId;	
 	}
 	
-	dicomViewer.prototype.initialize = function(canvasId, imgSrc){
-		this.canvas = document.getElementById(canvasId);
-		
+	dicomViewer.prototype.initialize = function(canvasId, imgSrc, callBack){
 		var dv = this;
 		
+		dv.canvas = document.getElementById(canvasId);
+		dv.canvas.oncontextmenu = function(evt){dv.onContextMenu.call(dv, evt);};
+
 		var dImg = new Image();
 		dImg.onload = function(){
 			jc.start(canvasId, true);
 			
 			dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
 			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});
+			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
 			
 			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
 			
 			dv.draggable(true);
 			dv.isReady = true;
 			
-			//create objects added before image be loaded
-//			dv.annotationList.forEach(function(obj){
-//				obj.create();
-//			});
+			if(callBack){
+				callBack();
+			}
 		}
 		
 		dImg.src = imgSrc;
@@ -121,12 +123,30 @@
 	
 	dicomViewer.prototype.onMouseDown = function(arg){
 		//if in select context, and not click any object, will unselect all objects.
-		if(!arg.event.cancelBubble && this.curContext == workContext.select){
-			//Selectect(undefined);
+		if(!arg.event.cancelBubble && this.curContext == viewContext.select){
+			
 			if(this.curSelectObj && this.curSelectObj.setEdit){
 				this.curSelectObj.setEdit(false);
 			}
 		}
+	}
+	
+	dicomViewer.prototype.onClick = function(arg){
+		if(this.curContext != viewContext.create){
+			return;
+		}
+		
+		if(!curSelectObj || curSelectObj.isCreated){
+			return;
+		}
+		
+		curSelectObj.onClick(arg);
+	}
+	
+	dicomViewer.prototype.onContextMenu = function(evt){
+		evt.stopImmediatePropagation();
+		evt.stopPropagation();
+		evt.preventDefault();
 	}
 	
 	dicomViewer.prototype.draggable = function(draggable){
@@ -147,14 +167,14 @@
 	}
 	
 	dicomViewer.prototype.setSelectModel = function(){
-		this.curContext = workContext.select;
+		this.curContext = viewContext.select;
 		
 		this.draggable(false);
 		//canvas.style.cursor = 'pointer';
 	}
 	
 	dicomViewer.prototype.setPanModel = function(){
-		this.curContext = workContext.pan;
+		this.curContext = viewContext.pan;
 		
 		this.draggable(true);
 		//canvas.style.cursor = 'default';
@@ -182,11 +202,11 @@
 			});
 		}
 		else{
-			this.curSelectObj = undefined;
+			if(curSelectObj){
+				curSelectObj.setEdit(false);
+			}
 			
-			this.annotationList.forEach(function(otherObj){
-				otherObj.setEdit(false);
-			});
+			this.curSelectObj = undefined;
 		}
 	}
 	
@@ -204,8 +224,10 @@
 	
 	dicomViewer.prototype.createLine = function(){
 		var aLine = new annLine(this);
-
-		this.annotationList.push(aLine);
+		this.curSelectObj = aLine;
+		this.curContext = viewContext.create;
+		
+		//this.annotationList.push(aLine);
 		
 		if(this.isReady){
 			aLine.create();
@@ -255,17 +277,17 @@
 		}
 		
 		jcObj.mouseover(function(arg){
-			if(dv.curContext == workContext.select)
+			if(dv.curContext == viewContext.select)
 				dv.canvas.style.cursor = overStyle;
 		});
 		
 		jcObj.mouseout(function(){
-			if(dv.curContext == workContext.select)
+			if(dv.curContext == viewContext.select)
 				dv.canvas.style.cursor = 'default';
 		});
 		
 		jcObj.mousedown(function(arg){
-			if(dv.curContext == workContext.select){
+			if(dv.curContext == viewContext.select){
 				dv.selectObject(annObj);
 				
 				arg.event.cancelBubble = true;
@@ -413,13 +435,7 @@
 		
 	}
 	
-	
-	
 	annLine.prototype = new annObject();
-	
-	annLine.prototype.onMouseClick(arg){
-		
-	}
 	
 	annLine.prototype.create = function(){
 		var dv = this.parent;

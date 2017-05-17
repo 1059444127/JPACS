@@ -57,13 +57,22 @@ window.onload = function(){
 	theCanvas.onmousewheel = onCanvasScale;
 	//var ogc = theCanvas.getContext('2d');
 	
+	theCanvas.oncontextmenu=function(evt){
+		var a = 10;
+		evt.stopImmediatePropagation();
+		evt.stopPropagation();
+		evt.preventDefault();
+	}
+	
 	theImage = new Image();
 	
 	theImage.onload = function(){
 		jc.start(canvasId, true);
 		jc.image(theImage).id('idImg').layer(imgLayerId);
 		jcImgLayer = jc.layer(imgLayerId);
-		
+		jcImgLayer.click(function(arg){
+			var a  =10;
+		});
 		setImgLayerDraggable(true);
 		
 		jc.text("", 10, 10).id('txtLabel');
