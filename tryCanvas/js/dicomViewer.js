@@ -11,7 +11,6 @@
 	viewContext.pan = 1;
 	viewContext.select = 2;
 	viewContext.create = 3;
-	//viewContext.Edit = 3;
 
 	var stepEnum = {};
 	stepEnum.step1 = 1;
@@ -136,11 +135,22 @@
 			return;
 		}
 		
-		if(!curSelectObj || curSelectObj.isCreated){
+		if(this.curSelectObj == null || this.curSelectObj.isCreated){
 			return;
 		}
 		
-		curSelectObj.onClick(arg);
+		var posImg = screenToImage(arg.x, arg.y, this.imgLayer.transform());
+		arg.x = posImg.x;
+		arg.y = posImg.y;
+		
+		this.curSelectObj.onCreate(arg);
+		
+		if(this.curSelectObj.isCreated){
+			//finish create
+			this.curContext = viewContext.select;
+			this.annotationList.push(this.curSelectObj);
+			this.curSelectObj.setEdit(true);
+		}
 	}
 	
 	dicomViewer.prototype.onContextMenu = function(evt){
@@ -167,19 +177,20 @@
 	}
 	
 	dicomViewer.prototype.setSelectModel = function(){
-		this.curContext = viewContext.select;
-		
+		this.curContext = viewContext.select;	
 		this.draggable(false);
-		//canvas.style.cursor = 'pointer';
 	}
 	
 	dicomViewer.prototype.setPanModel = function(){
-		this.curContext = viewContext.pan;
-		
+		this.curContext = viewContext.pan;	
 		this.draggable(true);
-		//canvas.style.cursor = 'default';
 		
 		this.selectObject(undefined);
+	}
+	
+	dicomViewer.prototype.setCreateModel = function(){
+		this.curContext = viewContext.create;
+		this.draggable(false);
 	}
 	
 	dicomViewer.prototype.addOverlay = function(tag, pos){
@@ -202,8 +213,8 @@
 			});
 		}
 		else{
-			if(curSelectObj){
-				curSelectObj.setEdit(false);
+			if(this.curSelectObj){
+				this.curSelectObj.setEdit(false);
 			}
 			
 			this.curSelectObj = undefined;
@@ -225,13 +236,8 @@
 	dicomViewer.prototype.createLine = function(){
 		var aLine = new annLine(this);
 		this.curSelectObj = aLine;
-		this.curContext = viewContext.create;
 		
-		//this.annotationList.push(aLine);
-		
-		if(this.isReady){
-			aLine.create();
-		}
+		this.setCreateModel();
 		
 		return aLine;
 	}
@@ -260,11 +266,10 @@
 	 * the annObject class
 	 */
 
-	function annObject(viewer){
-		this.parent = viewer;
+	function annObject(){
+		this.parent = undefined;
 		this.isInEdit = false;
 		this.isCreated = false;
-		this.id = "";
 	}
 	
 	//set child jcObject's common mouse event hander, etc.
@@ -337,19 +342,23 @@
 	 * the annRect class
 	 */
 	
-	function annRect(x, y, width, height){
+	function annRect(viewer){
 		annObject.call(this);
+		this.parent = viewer;
+		this.id = viewer.newObjectId();
 		
-		this.x = x;
-		this.y = y;
-		this.width = width;
-		this.height = height;
+		this.curStep = stepEnum.step1;
 	}
 	
 	annRect.prototype = new annObject();
 	
-	annRect.prototype.create = function(){
+	annRect.prototype.onCreate = function(){
 		var dv = this.parent;
+		
+		this.x = 10;
+		this.y = 10;
+		this.width = 100;
+		this.height = 30;
 		
 		//draw rect
 		var rectId = dv.newObjectId();
@@ -379,6 +388,8 @@
 		
 		this._setMouseEvent(this.circleA, 'nw-resize');
 		this.isCreated = true;
+		
+		this.setEdit(true);
 	}
 	
 	annRect.prototype.setEdit = function(edit){
@@ -421,62 +432,70 @@
 	 */
 	
 	function annLine(viewer){
-		annObject.call(this, viewer);
+		annObject.call(this);
+		this.parent = viewer;
+		this.id = viewer.newObjectId();
+		
 		this.curStep = stepEnum.step1;
-		
-		var obj = this;
-		viewer.imgLayer.click(function(arg){
-			obj.onMouseClick(arg);
-		});
-		
-		//this.ptStart = {x:startX, y:startY};
-		//this.ptEnd = {x:endX, y:endY};
-		
-		
 	}
 	
 	annLine.prototype = new annObject();
 	
-	annLine.prototype.create = function(){
+	annLine.prototype.onCreate = function(arg){
 		var dv = this.parent;
 		
-		var lineId = dv.newObjectId();
-		this.id = lineId;
-
-		jc.line([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]).id(lineId).layer(dv.imgLayerId).color(colorWhite);
-		this.line = jc('#'+lineId);
+		if(this.isCreated){
+			return;
+		}
 		
-		var idCircleStart = this.id +'_c1'; 
-		jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleStart).layer(dv.imgLayerId).color(colorWhite).opacity(0);
-		this.circleStart = jc('#'+idCircleStart);
+		if(this.curStep == stepEnum.step1){
+			this.ptStart = {x: arg.x, y: arg.y};
+			
+			var idCircleStart = this.id +'_c1';
+			jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleStart).layer(dv.imgLayerId).color(colorWhite);
+			this.circleStart = jc('#'+idCircleStart);
+			
+			this.curStep = stepEnum.step2;
+		}
+		else if(this.curStep == stepEnum.step2){
+			this.ptEnd = {x: arg.x, y:arg.y};
+				
+			var idCircleEnd = this.id +'_c2';
+			jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colorWhite);
+			this.circleEnd = jc('#'+idCircleEnd);
+			
+			var lineId = this.id +'_line';
+			jc.line([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]).id(lineId).layer(dv.imgLayerId).color(colorWhite);
+			this.line = jc('#'+lineId);
+			
+			var idCircleM = this.id+'_cm';
+			var ptMiddle = {};
+			ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
+			ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;	
+			jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colorWhite);
+			this.circleMiddle = jc('#'+idCircleM);
+			
+			var idLbl = this.id+'_lbl';
+			var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
+			jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
+			this.label = jc('#'+idLbl);
+			
+			var idLblLine = this.id+'_lblLine';
+			var ptLblCenter = this.label.getCenter();
+			ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
+			ptLblCenter.y+= 15;
+			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
+			this.lableLine = jc('#'+idLblLine);
+			
+			this._setMouseEvent(this.circleStart, 'crosshair');
+			this._setMouseEvent(this.circleEnd, 'crosshair');
+			this._setMouseEvent(this.circleMiddle, 'crosshair');
+			this._setMouseEvent(this.label);
+			
+			this.isCreated = true;
+		}
 		
-		var idCircleEnd = this.id +'_c2'; 
-		jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colorWhite).opacity(0);
-		this.circleEnd = jc('#'+idCircleEnd);
-		
-		var idCircleM = this.id+'_cm';
-		var ptMiddle = {};
-		ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
-		ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;	
-		jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colorWhite).opacity(0);
-		this.circleMiddle = jc('#'+idCircleM);
-		
-		var idLbl = this.id+'_lbl';
-		var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
-		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
-		this.label = jc('#'+idLbl);
-		
-		var idLblLine = this.id+'_lblLine';
-		var ptLblCenter = this.label.getCenter();
-		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
-		ptLblCenter.y+= 15;
-		jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
-		this.lableLine = jc('#'+idLblLine);
-		
-		this._setMouseEvent(this.circleStart, 'crosshair');
-		this._setMouseEvent(this.circleEnd, 'crosshair');
-		this._setMouseEvent(this.circleMiddle, 'crosshair');
-		this._setMouseEvent(this.label);
+		return;
 	}
 	
 	annLine.prototype.setEdit = function(edit){

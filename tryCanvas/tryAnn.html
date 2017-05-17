@@ -19,11 +19,14 @@
 			window.onload = function(){
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
-					
+					$('#btnAddLine').on('click', function(){
+						var aLine = v1.createLine();
+
+					});
 				});
 				
 				v1.onDragImage = function(arg){
-					
+
 				}
 				
 				//v1.addRect(10, 10, 100, 30);
@@ -33,10 +36,7 @@
 					var aRect = v1.addRect(30, 30, 50, 50);
 				});
 				
-				$('#btnAddLine').on('click', function(){
-					var aLine = v1.createLine();
 
-				});
 				
 				$('#btnSelect').on('click', function(){
 					v1.setSelectModel();
