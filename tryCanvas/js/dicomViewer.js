@@ -12,8 +12,10 @@
 	var stepEnum = {step1:1, step2:2, step3:3, step4:4, step5:5};
 
 	//define colors
-	var colorWhite = '#ffffff';
-	var colorRed = '#ff0000';
+	var colors = {white='#ffffff', red='#ff0000'};
+	
+	//define event type
+	var eventType = {click=1, mouseDown=2, mouseMove=3, mouseUp=4, mouseOver=5, mouseOut=6, rightClick=7, dblClick=8};
 	
 	function screenToImage(x, y, imgTrans){
 	
@@ -92,7 +94,8 @@
 			
 			dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
 			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});
-			//dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
+			
+			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
 			
 			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
 			
@@ -110,6 +113,18 @@
 	
 	dicomViewer.prototype.setDicomTags = function(tagList){
 		this.dicomTagList = tagList;	
+	}
+	
+	dicomViewer.prototype.registerEvent(obj, type, func){
+		
+	}
+	
+	dicomViewer.prototype.unRegisterEvent(obj, type){
+		
+	}
+	
+	dicomViewer.prototype.onClick = function(arg){
+		
 	}
 	
 	dicomViewer.prototype.onMouseDown = function(arg){
@@ -366,7 +381,7 @@
 				//create rect if not created
 				if(!aRect.rect){
 					var rectId = dv._newObjectId();
-					jc.rect(aRect.ptStart.x, aRect.ptStart.y, aRect.width, aRect.height).layer(dv.imgLayerId).id(rectId).color(colorWhite);
+					jc.rect(aRect.ptStart.x, aRect.ptStart.y, aRect.width, aRect.height).layer(dv.imgLayerId).id(rectId).color(colors.white);
 					aRect.rect = jc('#'+ rectId);
 				}
 				
@@ -427,7 +442,7 @@
 		var rectId = dv._newObjectId();
 		
 		
-		jc.rect(this.x, this.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colorWhite);
+		jc.rect(this.x, this.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colors.white);
 		this.rect = jc('#'+ rectId);
 		//this.rect.lineStyle({lineWidth:1});
 		
@@ -438,14 +453,14 @@
 		//draw label text
 		var idLbl = this.id+"_lbl";
 		var lblPos = {x:this.x+5, y:this.y-5};
-		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
+		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 		this.label = jc('#'+idLbl);
 		
 		this._setChildMouseEvent(this.label);
 		
 		//draw assit objects
 		var idCircleA = this.id+"_aCircle";
-		jc.circle(this.x, this.y, 5).id(idCircleA).layer(dv.imgLayerId).color(colorRed);
+		jc.circle(this.x, this.y, 5).id(idCircleA).layer(dv.imgLayerId).color(colors.red);
 		this.circleA = jc("#"+idCircleA);
 		this.circleA.visible(false);
 		
@@ -461,12 +476,12 @@
 		this.circleA.visible(edit);
 		
 		if(edit){
-			this.rect.color(colorRed);
-			this.label.color(colorRed);
+			this.rect.color(colors.red);
+			this.label.color(colors.red);
 		}
 		else{
-			this.rect.color(colorWhite);
-			this.label.color(colorWhite);
+			this.rect.color(colors.white);
+			this.label.color(colors.white);
 		}
 	}
 	
@@ -527,7 +542,7 @@
 			this.ptStart = {x: arg.x, y: arg.y};
 			
 			var idCircleStart = this.id +'_c1';
-			jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleStart).layer(dv.imgLayerId).color(colorWhite);
+			jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleStart).layer(dv.imgLayerId).color(colors.white);
 			this.circleStart = jc('#'+idCircleStart);
 			
 			this.curStep = stepEnum.step2;
@@ -536,30 +551,30 @@
 			this.ptEnd = {x: arg.x, y:arg.y};
 				
 			var idCircleEnd = this.id +'_c2';
-			jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colorWhite);
+			jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colors.white);
 			this.circleEnd = jc('#'+idCircleEnd);
 			
 			var lineId = this.id +'_line';
-			jc.line([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]).id(lineId).layer(dv.imgLayerId).color(colorWhite);
+			jc.line([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]).id(lineId).layer(dv.imgLayerId).color(colors.white);
 			this.line = jc('#'+lineId);
 			
 			var idCircleM = this.id+'_cm';
 			var ptMiddle = {};
 			ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
 			ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;	
-			jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colorWhite);
+			jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colors.white);
 			this.circleMiddle = jc('#'+idCircleM);
 			
 			var idLbl = this.id+'_lbl';
 			var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
-			jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
+			jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 			this.label = jc('#'+idLbl);
 			
 			var idLblLine = this.id+'_lblLine';
 			var ptLblCenter = this.label.getCenter();
 			ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
 			ptLblCenter.y+= 15;
-			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
+			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
 			this.lableLine = jc('#'+idLblLine);
 			
 			this._setChildMouseEvent(this.circleStart, 'crosshair');
@@ -613,20 +628,20 @@
 		this.setDraggable(edit);
 		
 		if(edit){
-			this.line.color(colorRed);
-			this.label.color(colorRed);
-			this.lableLine.color(colorRed);
-			this.circleStart.color(colorRed).opacity(1);
-			this.circleEnd.color(colorRed).opacity(1);
-			this.circleMiddle.color(colorRed).opacity(1);	
+			this.line.color(colors.red);
+			this.label.color(colors.red);
+			this.lableLine.color(colors.red);
+			this.circleStart.color(colors.red).opacity(1);
+			this.circleEnd.color(colors.red).opacity(1);
+			this.circleMiddle.color(colors.red).opacity(1);	
 		}
 		else{
-			this.line.color(colorWhite);
-			this.label.color(colorWhite);
-			this.lableLine.color(colorWhite);
-			this.circleStart.color(colorWhite).opacity(0);
-			this.circleEnd.color(colorWhite).opacity(0);
-			this.circleMiddle.color(colorWhite).opacity(0);
+			this.line.color(colors.white);
+			this.label.color(colors.white);
+			this.lableLine.color(colors.white);
+			this.circleStart.color(colors.white).opacity(0);
+			this.circleEnd.color(colors.white).opacity(0);
+			this.circleMiddle.color(colors.white).opacity(0);
 		}
 	}
 	
