@@ -7,19 +7,11 @@
  */
 (function(window, undefined){
 	
-	var viewContext = {};
-	viewContext.pan = 1;
-	viewContext.select = 2;
-	viewContext.create = 3;
+	//define enums
+	var viewContext = {pan:1, select:2, create:3};
+	var stepEnum = {step1:1, step2:2, step3:3, step4:4, step5:5};
 
-	var stepEnum = {};
-	stepEnum.step1 = 1;
-	stepEnum.step2 = 2;
-	stepEnum.step3 = 3;
-	stepEnum.step4 = 4;
-	stepEnum.step5 = 5;
-
-	//colors
+	//define colors
 	var colorWhite = '#ffffff';
 	var colorRed = '#ff0000';
 	
@@ -80,12 +72,12 @@
 		this.imgLayerId = this.id +'_imgLayer';
 		this.imgId = this.id +'_imgId';
 		
-		this._objectId = 0;
+		this._objectIndex = 0;
 	}
 	
-	dicomViewer.prototype.newObjectId = function(){
-		this._objectId++;
-		return this.id + "_obj_" + this._objectId;	
+	dicomViewer.prototype._newObjectId = function(){
+		this._objectIndex++;
+		return this.id + "_obj_" + this._objectIndex;	
 	}
 	
 	dicomViewer.prototype.initialize = function(canvasId, imgSrc, callBack){
@@ -100,7 +92,7 @@
 			
 			dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
 			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});
-			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
+			//dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
 			
 			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
 			
@@ -130,39 +122,12 @@
 		}
 	}
 	
-	dicomViewer.prototype.onClick = function(arg){
-		if(this.curContext != viewContext.create){
-			return;
-		}
-		
-		if(this.curSelectObj == null || this.curSelectObj.isCreated){
-			return;
-		}
-		
-		var posImg = screenToImage(arg.x, arg.y, this.imgLayer.transform());
-		arg.x = posImg.x;
-		arg.y = posImg.y;
-		
-		this.curSelectObj.onCreate(arg);
-		
-		if(this.curSelectObj.isCreated){
-			//finish create
-			this.curContext = viewContext.select;
-			this.annotationList.push(this.curSelectObj);
-			this.curSelectObj.setEdit(true);
-		}
-	}
-	
 	dicomViewer.prototype.onContextMenu = function(evt){
 		
 		if(this.curContext == viewContext.create){
-			if(this.curSelectObj){
-				this.curSelectObj.delete();
-				this.curSelectObj = undefined;
-			}
-			
-			this.setSelectModel();
+			this.setContext(viewContext.select);
 		}
+		//todo: add context menus
 		
 		evt.stopImmediatePropagation();
 		evt.stopPropagation();
@@ -186,21 +151,16 @@
 		});
 	}
 	
-	dicomViewer.prototype.setSelectModel = function(){
-		this.curContext = viewContext.select;	
-		this.draggable(false);
-	}
-	
-	dicomViewer.prototype.setPanModel = function(){
-		this.curContext = viewContext.pan;	
-		this.draggable(true);
+	dicomViewer.prototype.setContext = function(ctx){
+		var lastContext = this.curContext;
 		
-		this.selectObject(undefined);
-	}
-	
-	dicomViewer.prototype.setCreateModel = function(){
-		this.curContext = viewContext.create;
-		this.draggable(false);
+		if(lastContext !== ctx){
+			var draggable = ctx == viewContext.pan;
+			this.draggable(draggable);
+			
+			this.curContext = ctx;
+			this.selectObject(undefined);
+		}
 	}
 	
 	dicomViewer.prototype.addOverlay = function(tag, pos){
@@ -224,10 +184,25 @@
 		}
 		else{
 			if(this.curSelectObj){
-				this.curSelectObj.setEdit(false);
+				if(this.curSelectObj.isCreated){
+					this.curSelectObj.setEdit(false);
+				}
+				else{
+					this.curSelectObj.delete();
+				}
 			}
 			
 			this.curSelectObj = undefined;
+		}
+	}
+	
+	dicomViewer.prototype.deleteObject = function(obj){
+		if(obj && obj instanceof annObject){
+			obj.delete();
+			
+			if(this.annotationList.contains(obj)){
+				this.annotationList.remove(obj);
+			}
 		}
 	}
 	
@@ -245,11 +220,22 @@
 	
 	dicomViewer.prototype.createLine = function(){
 		var aLine = new annLine(this);
-		this.curSelectObj = aLine;
+		this.setContext(viewContext.create);
 		
-		this.setCreateModel();
+		this.curSelectObj = aLine;
+		aLine.startCreate();
 		
 		return aLine;
+	}
+	
+	dicomViewer.prototype.onObjectCreated = function(obj){
+		if(obj && obj.isCreated){
+			//finish create
+			this.curSelectObj = obj;
+			this.curContext = viewContext.select;
+			this.annotationList.push(this.curSelectObj);
+			this.curSelectObj.setEdit(true);
+		}
 	}
 	
 	/*********************************
@@ -283,7 +269,7 @@
 	}
 	
 	//set child jcObject's common mouse event hander, etc.
-	annObject.prototype._setMouseEvent = function(jcObj, overStyle){
+	annObject.prototype._setChildMouseEvent = function(jcObj, overStyle){
 		var dv = this.parent;
 		var annObj = this;
 		
@@ -310,7 +296,7 @@
 		});		
 	}
 	
-	annObject.prototype._setDraggable = function(jcObj, draggable, onDrag){
+	annObject.prototype._setChildDraggable = function(jcObj, draggable, onDrag){
 		var dv = this.parent;
 		var annObj = this;
 		var transTmp = dv.imgLayer.transform();
@@ -355,7 +341,7 @@
 	function annRect(viewer){
 		annObject.call(this);
 		this.parent = viewer;
-		this.id = viewer.newObjectId();
+		this.id = viewer._newObjectId();
 		
 		this.curStep = stepEnum.step1;
 	}
@@ -371,7 +357,7 @@
 		this.height = 30;
 		
 		//draw rect
-		var rectId = dv.newObjectId();
+		var rectId = dv._newObjectId();
 		this.id = rectId;
 		
 		jc.rect(this.x, this.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colorWhite);
@@ -380,7 +366,7 @@
 		
 		//handle rect events
 		var aRect = this;
-		this._setMouseEvent(this.rect);
+		this._setChildMouseEvent(this.rect);
 
 		//draw label text
 		var idLbl = this.id+"_lbl";
@@ -388,7 +374,7 @@
 		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colorWhite).font('15px Times New Roman');
 		this.label = jc('#'+idLbl);
 		
-		this._setMouseEvent(this.label);
+		this._setChildMouseEvent(this.label);
 		
 		//draw assit objects
 		var idCircleA = this.id+"_aCircle";
@@ -396,7 +382,7 @@
 		this.circleA = jc("#"+idCircleA);
 		this.circleA.visible(false);
 		
-		this._setMouseEvent(this.circleA, 'nw-resize');
+		this._setChildMouseEvent(this.circleA, 'nw-resize');
 		this.isCreated = true;
 		
 		this.setEdit(true);
@@ -421,12 +407,12 @@
 		var aRect = this;
 		var transTmp = this.parent.imgLayer.transform();
 		
-		this._setDraggable(this.rect, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(this.rect, draggable, function(deltaX, deltaY){
 			aRect.circleA.translate(deltaX, deltaY);
 			aRect.label.translate(deltaX, deltaY);
 		});
 		
-		this._setDraggable(this.circleA, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(this.circleA, draggable, function(deltaX, deltaY){
 			aRect.rect.translate(deltaX, deltaY);
 			aRect.rect._width -= deltaX;
 			aRect.rect._height -= deltaY;
@@ -434,7 +420,7 @@
 			aRect.label.translate(deltaX, deltaY);			
 		});
 		
-		this._setDraggable(this.label, draggable);
+		this._setChildDraggable(this.label, draggable);
 	}
 	
 	/*********************************
@@ -444,12 +430,25 @@
 	function annLine(viewer){
 		annObject.call(this);
 		this.parent = viewer;
-		this.id = viewer.newObjectId();
+		this.id = viewer._newObjectId();
 		
 		this.curStep = stepEnum.step1;
 	}
 	
 	annLine.prototype = new annObject();
+	
+	annLine.prototype.startCreate = function(){
+		var dv = this.parent;
+		var aLine = this;
+		
+		dv.imgLayer.click(function(arg){
+			var posImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
+			arg.x = posImg.x;
+			arg.y = posImg.y;
+			
+			aLine.onCreate(arg)
+		});
+	}
 	
 	annLine.prototype.onCreate = function(arg){
 		var dv = this.parent;
@@ -497,18 +496,28 @@
 			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colorWhite);
 			this.lableLine = jc('#'+idLblLine);
 			
-			this._setMouseEvent(this.circleStart, 'crosshair');
-			this._setMouseEvent(this.circleEnd, 'crosshair');
-			this._setMouseEvent(this.circleMiddle, 'crosshair');
-			this._setMouseEvent(this.label);
+			this._setChildMouseEvent(this.circleStart, 'crosshair');
+			this._setChildMouseEvent(this.circleEnd, 'crosshair');
+			this._setChildMouseEvent(this.circleMiddle, 'crosshair');
+			this._setChildMouseEvent(this.label);
 			
 			this.isCreated = true;
+			dv.onObjectCreated(this);
+			
+			//unregister events
+			dv.imgLayer.click(null);
 		}
 		
 		return;
 	}
 	
 	annLine.prototype.delete = function(){
+		var dv = this.parent;
+		if(!this.isCreated){
+			//unregister events
+			dv.imgLayer.click(null);
+		}
+		
 		if(this.circleStart){
 			this.circleStart.del();
 			this.circleStart = undefined;
@@ -564,19 +573,19 @@
 		var cm = aLine.circleMiddle;
 		var lbl = aLine.label;
 		
-		this._setDraggable(cs, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(cs, draggable, function(deltaX, deltaY){
 			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};
 					
 			aLine._reDraw();		
 		});
 		
-		this._setDraggable(ce, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(ce, draggable, function(deltaX, deltaY){
 			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
 					
 			aLine._reDraw();
 		});
 		
-		this._setDraggable(cm, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(cm, draggable, function(deltaX, deltaY){
 			cm.translate(-deltaX, -deltaY);
 			
 			cs.translate(deltaX, deltaY);
@@ -588,7 +597,7 @@
 			aLine._reDraw();
 		});
 		
-		this._setDraggable(lbl, draggable, function(deltaX, deltaY){
+		this._setChildDraggable(lbl, draggable, function(deltaX, deltaY){
 			aLine._reDraw();
 		});
 	}
@@ -615,5 +624,6 @@
 	window.dicomViewer = dicomViewer;
 	window.dicomTag = dicomTag;
 	window.overlay = overlay;
+	window.viewContext = viewContext;
 	
 })(window, undefined);

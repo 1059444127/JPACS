@@ -25,27 +25,18 @@
 					});
 				});
 				
-				v1.onDragImage = function(arg){
-
-				}
-				
-				//v1.addRect(10, 10, 100, 30);
-				//v1.addRect(20, 20, 100, 30);
-				
 				$('#btnAddRect').on('click', function(){
 					var aRect = v1.addRect(30, 30, 50, 50);
 				});
 				
-
-				
 				$('#btnSelect').on('click', function(){
-					v1.setSelectModel();
-					v2.setSelectModel();
+					v1.setContext(viewContext.select);
+					v2.setContext(viewContext.select);
 				});
 				
 				$('#btnPan').on('click', function(){
-					v1.setPanModel();
-					v2.setPanModel();
+					v1.setContext(viewContext.pan);
+					v2.setContext(viewContext.pan);
 				});
 				
 				var v2 = new dicomViewer();
