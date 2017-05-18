@@ -206,14 +206,12 @@
 		}
 	}
 	
-	dicomViewer.prototype.addRect = function(x, y, width, height){
-		var aRect = new annRect(x, y, width, height);
-		aRect.parent = this;
-		this.annotationList.push(aRect);
+	dicomViewer.prototype.createRect = function(){
+		var aRect = new annRect(this);
+		this.setContext(viewContext.create);
 		
-		if(this.isReady){
-			aRect.create();
-		}
+		this.curSelectObj = aRect;
+		aRect.startCreate();
 		
 		return aRect;
 	}
@@ -342,11 +340,80 @@
 		annObject.call(this);
 		this.parent = viewer;
 		this.id = viewer._newObjectId();
-		
-		this.curStep = stepEnum.step1;
 	}
 	
 	annRect.prototype = new annObject();
+	
+	annRect.prototype._registerEvents = function(){
+		var dv = this.parent;
+		var aRect = this;
+		
+		dv.imgLayer.mousedown(function(arg){
+			if(aRect.curStep == stepEnum.step1){
+				var ptImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
+				aRect.ptStart = {x: ptImg.x, y:ptImg.y};
+				
+				aRect.curStep = stepEnum.step2;
+			}
+		});
+		
+		dv.imgLayer.mousemove(function(arg){
+			if(aRect.curStep == stepEnum.step2){
+				var ptImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
+				aRect.width = Math.abs(ptImg.x - aRect.ptStart.x);
+				aRect.height = Math.abs(ptImg.y - aRect.ptStart.y);
+				
+				//create rect if not created
+				if(!aRect.rect){
+					var rectId = dv._newObjectId();
+					jc.rect(aRect.ptStart.x, aRect.ptStart.y, aRect.width, aRect.height).layer(dv.imgLayerId).id(rectId).color(colorWhite);
+					aRect.rect = jc('#'+ rectId);
+				}
+				
+				aRect.rect._width = aRect.width;
+				aRect.rect._height = aRect.height;
+				
+				aRect.curStep == stepEnum.step3;
+			}
+		});
+		
+		dv.imgLayer.mouseup(function(arg){
+			if(aRect.curStep == stepEnum.step3){
+				aRect.isCreated = true;
+				dv.onObjectCreated(aRect);
+				
+				aRect._unRegisterEvents();
+			}
+//			else{
+//				if(!aRect.isCreated){
+//					aRect.delete();
+//				}
+//			}
+		});
+	}
+	
+	annRect.prototype._unRegisterEvents = function(){
+		var dv = this.parent;
+		dv.imgLayer.mousedown(null);
+		dv.imgLayer.mousemove(null);
+		dv.imgLayer.mouseup(null);
+	}
+	
+	annRect.prototype.startCreate = function(){
+		this.curStep = stepEnum.step1;
+		
+		this._registerEvents();
+	}
+	
+	annRect.prototype.delete = function(){
+		var dv = this.parent;
+		if(!this.isCreated){
+			//unregister events
+			this._unRegisterEvents();
+		}
+		
+		
+	}
 	
 	annRect.prototype.onCreate = function(){
 		var dv = this.parent;
@@ -358,7 +425,7 @@
 		
 		//draw rect
 		var rectId = dv._newObjectId();
-		this.id = rectId;
+		
 		
 		jc.rect(this.x, this.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colorWhite);
 		this.rect = jc('#'+ rectId);
@@ -431,8 +498,6 @@
 		annObject.call(this);
 		this.parent = viewer;
 		this.id = viewer._newObjectId();
-		
-		this.curStep = stepEnum.step1;
 	}
 	
 	annLine.prototype = new annObject();
@@ -440,6 +505,7 @@
 	annLine.prototype.startCreate = function(){
 		var dv = this.parent;
 		var aLine = this;
+		aLine.curStep = stepEnum.step1;
 		
 		dv.imgLayer.click(function(arg){
 			var posImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());

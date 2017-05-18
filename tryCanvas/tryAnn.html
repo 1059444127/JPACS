@@ -23,11 +23,13 @@
 						var aLine = v1.createLine();
 
 					});
+					
+					$('#btnAddRect').on('click', function(){
+						var aRect = v1.createRect();
+					});
 				});
 				
-				$('#btnAddRect').on('click', function(){
-					var aRect = v1.addRect(30, 30, 50, 50);
-				});
+				
 				
 				$('#btnSelect').on('click', function(){
 					v1.setContext(viewContext.select);
