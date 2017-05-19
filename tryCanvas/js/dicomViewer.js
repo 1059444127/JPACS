@@ -12,10 +12,10 @@
 	var stepEnum = {step1:1, step2:2, step3:3, step4:4, step5:5};
 
 	//define colors
-	var colors = {white='#ffffff', red='#ff0000'};
+	var colors = {white:'#ffffff', red:'#ff0000'};
 	
 	//define event type
-	var eventType = {click=1, mouseDown=2, mouseMove=3, mouseUp=4, mouseOver=5, mouseOut=6, rightClick=7, dblClick=8};
+	var eventType = {click:1, mouseDown:2, mouseMove:3, mouseUp:4, mouseOver:5, mouseOut:6, rightClick:7, dblClick:8};
 	
 	function screenToImage(x, y, imgTrans){
 	
@@ -48,7 +48,10 @@
 	}
 	
 	function countDistance(x1, y1, x2, y2){
-		var t = (x1-x2);
+		var value = Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2);
+		value = Math.sqrt(value);
+		
+		return Math.round(value * 100) / 100;
 	}
 	
 	var globalViewerId = 1;
@@ -63,9 +66,9 @@
 	
 	function dicomViewer(){
 		this.id = newViewerId();
-		this.annotationList = new Array();
-		this.overlayList = new Array();
-		this.dicomTagList = new Array();
+		this.annotationList = [];
+		this.overlayList = [];
+		this.dicomTagList = [];
 		
 		this.isReady = false;
 		this.curContext = viewContext.pan;
@@ -74,6 +77,7 @@
 		this.imgLayerId = this.id +'_imgLayer';
 		this.imgId = this.id +'_imgId';
 		
+		this.eventHandlers = {};
 		this._objectIndex = 0;
 	}
 	
@@ -93,10 +97,14 @@
 			jc.start(canvasId, true);
 			
 			dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
-			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});
 			
+			//register events
+			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});	
+			dv.imgLayer.mousemove(function(arg){dv.onMouseMove.call(dv, arg)});	
+			dv.imgLayer.mouseup(function(arg){dv.onMouseUp.call(dv, arg)});	
 			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
 			
+			//show image
 			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
 			
 			dv.draggable(true);
@@ -115,16 +123,59 @@
 		this.dicomTagList = tagList;	
 	}
 	
-	dicomViewer.prototype.registerEvent(obj, type, func){
+	dicomViewer.prototype.registerEvent = function(obj, type){
+		if(!this.eventHandlers[type]){
+			this.eventHandlers[type] = [];
+		}
 		
+		var handlers = this.eventHandlers[type];
+		var len = handlers.length, i;
+		
+		for(i = 0; i<len; i++ ){
+			if(handlers[i] === obj){
+				return;//exists already
+			}	
+		}
+		
+		handlers.push(obj);
 	}
 	
-	dicomViewer.prototype.unRegisterEvent(obj, type){
+	dicomViewer.prototype.unRegisterEvent = function(obj, type){
+		if(!this.eventHandlers[type]){
+			return;
+		}
 		
+		var handlers = this.eventHandlers[type];
+		var len = handlers.length, i, found = false;
+		
+		for(i=0; i<len; i++){
+			if(handlers[i] === obj){
+				found = true;
+				break;
+			}
+		}
+		
+		if(found){
+			handlers.splice(i, 1);
+		}
+	}
+	
+	dicomViewer.prototype._handleEvent = function(arg, type, handler){
+		var handlers = this.eventHandlers[type]
+		if(!handlers || handlers.length == 0){
+			return;
+		}
+		
+		var ptImg = screenToImage(arg.x, arg.y, this.imgLayer.transform());
+		handlers.forEach(function(obj){
+			if(obj[handler]){
+				obj[handler]({x:ptImg.x, y:ptImg.y});
+			}
+		});
 	}
 	
 	dicomViewer.prototype.onClick = function(arg){
-		
+		this._handleEvent(arg, eventType.click, 'onClick');
 	}
 	
 	dicomViewer.prototype.onMouseDown = function(arg){
@@ -135,8 +186,18 @@
 				this.curSelectObj.setEdit(false);
 			}
 		}
+		
+		this._handleEvent(arg, eventType.mouseDown, 'onMouseDown');
 	}
 	
+	dicomViewer.prototype.onMouseMove = function(arg){
+		this._handleEvent(arg, eventType.mouseMove, 'onMouseMove');
+	}
+	
+	dicomViewer.prototype.onMouseUp = function(arg){
+		this._handleEvent(arg, eventType.mouseUp, 'onMouseUp');
+	}
+		
 	dicomViewer.prototype.onContextMenu = function(evt){
 		
 		if(this.curContext == viewContext.create){
@@ -359,115 +420,84 @@
 	
 	annRect.prototype = new annObject();
 	
-	annRect.prototype._registerEvents = function(){
-		var dv = this.parent;
-		var aRect = this;
-		
-		dv.imgLayer.mousedown(function(arg){
-			if(aRect.curStep == stepEnum.step1){
-				var ptImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
-				aRect.ptStart = {x: ptImg.x, y:ptImg.y};
-				
-				aRect.curStep = stepEnum.step2;
-			}
-		});
-		
-		dv.imgLayer.mousemove(function(arg){
-			if(aRect.curStep == stepEnum.step2){
-				var ptImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
-				aRect.width = Math.abs(ptImg.x - aRect.ptStart.x);
-				aRect.height = Math.abs(ptImg.y - aRect.ptStart.y);
-				
-				//create rect if not created
-				if(!aRect.rect){
-					var rectId = dv._newObjectId();
-					jc.rect(aRect.ptStart.x, aRect.ptStart.y, aRect.width, aRect.height).layer(dv.imgLayerId).id(rectId).color(colors.white);
-					aRect.rect = jc('#'+ rectId);
-				}
-				
-				aRect.rect._width = aRect.width;
-				aRect.rect._height = aRect.height;
-				
-				aRect.curStep == stepEnum.step3;
-			}
-		});
-		
-		dv.imgLayer.mouseup(function(arg){
-			if(aRect.curStep == stepEnum.step3){
-				aRect.isCreated = true;
-				dv.onObjectCreated(aRect);
-				
-				aRect._unRegisterEvents();
-			}
-//			else{
-//				if(!aRect.isCreated){
-//					aRect.delete();
-//				}
-//			}
-		});
+	annRect.prototype.onMouseDown = function(arg){
+		if(this.curStep == stepEnum.step1){
+			this.ptStart = {x: arg.x, y:arg.y};
+			this.curStep = stepEnum.step2;
+		}
 	}
 	
-	annRect.prototype._unRegisterEvents = function(){
+	annRect.prototype.onMouseMove = function(arg){
 		var dv = this.parent;
-		dv.imgLayer.mousedown(null);
-		dv.imgLayer.mousemove(null);
-		dv.imgLayer.mouseup(null);
+		if(this.curStep == stepEnum.step2){
+			this.width = Math.abs(arg.x - this.ptStart.x);
+			this.height = Math.abs(arg.y - this.ptStart.y);
+			
+			//create rect if not created
+			if(!this.rect){
+				var rectId = dv._newObjectId();
+				jc.rect(this.ptStart.x, this.ptStart.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colors.white);
+				this.rect = jc('#'+ rectId);
+				
+				this._setChildMouseEvent(this.rect);
+			}
+			
+			this.rect._width = this.width;
+			this.rect._height = this.height;
+			
+			if(!this.circleA){
+				var idCircleA = this.id+"_aCircle";
+				jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleA).layer(dv.imgLayerId).color(colors.white);
+				this.circleA = jc("#"+idCircleA);
+				
+				this._setChildMouseEvent(this.circleA, 'crosshair');
+			}
+		
+			if(!this.label){
+				var idLbl = this.id+"_lbl";
+				var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
+				jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+				this.label = jc('#'+idLbl);
+				
+				this._setChildMouseEvent(this.label);
+			}
+			
+			this.updateLabel();
+		}
 	}
 	
+	annRect.prototype.onMouseUp = function(arg){
+		var dv = this.parent;
+		if(this.curStep == stepEnum.step2){
+			this.isCreated = true;
+			dv.onObjectCreated(this);
+			
+			dv.unRegisterEvent(this, eventType.mouseDown);
+			dv.unRegisterEvent(this, eventType.mouseMove);
+			dv.unRegisterEvent(this, eventType.mouseUp);
+		}
+		else{
+			this.curStep = stepEnum.step1;
+		}
+	}
+
 	annRect.prototype.startCreate = function(){
 		this.curStep = stepEnum.step1;
+		var dv = this.parent;
 		
-		this._registerEvents();
+		dv.registerEvent(this, eventType.mouseDown);
+		dv.registerEvent(this, eventType.mouseMove);
+		dv.registerEvent(this, eventType.mouseUp);
 	}
 	
 	annRect.prototype.delete = function(){
 		var dv = this.parent;
 		if(!this.isCreated){
 			//unregister events
-			this._unRegisterEvents();
+			dv.unRegisterEvent(this, eventType.mouseDown);
+			dv.unRegisterEvent(this, eventType.mouseMove);
+			dv.unRegisterEvent(this, eventType.mouseUp);
 		}
-		
-		
-	}
-	
-	annRect.prototype.onCreate = function(){
-		var dv = this.parent;
-		
-		this.x = 10;
-		this.y = 10;
-		this.width = 100;
-		this.height = 30;
-		
-		//draw rect
-		var rectId = dv._newObjectId();
-		
-		
-		jc.rect(this.x, this.y, this.width, this.height).layer(dv.imgLayerId).id(rectId).color(colors.white);
-		this.rect = jc('#'+ rectId);
-		//this.rect.lineStyle({lineWidth:1});
-		
-		//handle rect events
-		var aRect = this;
-		this._setChildMouseEvent(this.rect);
-
-		//draw label text
-		var idLbl = this.id+"_lbl";
-		var lblPos = {x:this.x+5, y:this.y-5};
-		jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-		this.label = jc('#'+idLbl);
-		
-		this._setChildMouseEvent(this.label);
-		
-		//draw assit objects
-		var idCircleA = this.id+"_aCircle";
-		jc.circle(this.x, this.y, 5).id(idCircleA).layer(dv.imgLayerId).color(colors.red);
-		this.circleA = jc("#"+idCircleA);
-		this.circleA.visible(false);
-		
-		this._setChildMouseEvent(this.circleA, 'nw-resize');
-		this.isCreated = true;
-		
-		this.setEdit(true);
 	}
 	
 	annRect.prototype.setEdit = function(edit){
@@ -478,11 +508,20 @@
 		if(edit){
 			this.rect.color(colors.red);
 			this.label.color(colors.red);
+			this.circleA.color(colors.red);
 		}
 		else{
 			this.rect.color(colors.white);
 			this.label.color(colors.white);
+			this.circleA.color(colors.white);
 		}
+	}
+	
+	annRect.prototype.updateLabel = function(){
+		var size = 2*(this.width + this.height);
+		var msg = "size=" + size;
+		
+		this.label.string(msg);
 	}
 	
 	annRect.prototype.setDraggable = function(draggable){
@@ -498,8 +537,10 @@
 			aRect.rect.translate(deltaX, deltaY);
 			aRect.rect._width -= deltaX;
 			aRect.rect._height -= deltaY;
-			
-			aRect.label.translate(deltaX, deltaY);			
+			aRect.width = aRect.rect._width;
+			aRect.height = aRect.rect._height;
+			aRect.label.translate(deltaX, deltaY);	
+			aRect.updateLabel();
 		});
 		
 		this._setChildDraggable(this.label, draggable);
@@ -519,19 +560,12 @@
 	
 	annLine.prototype.startCreate = function(){
 		var dv = this.parent;
-		var aLine = this;
-		aLine.curStep = stepEnum.step1;
+		this.curStep = stepEnum.step1;
 		
-		dv.imgLayer.click(function(arg){
-			var posImg = screenToImage(arg.x, arg.y, dv.imgLayer.transform());
-			arg.x = posImg.x;
-			arg.y = posImg.y;
-			
-			aLine.onCreate(arg)
-		});
+		dv.registerEvent(this, eventType.click);
 	}
 	
-	annLine.prototype.onCreate = function(arg){
+	annLine.prototype.onClick = function(arg){
 		var dv = this.parent;
 		
 		if(this.isCreated){
@@ -567,7 +601,7 @@
 			
 			var idLbl = this.id+'_lbl';
 			var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
-			jc.text('办证' +idLbl, lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+			jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 			this.label = jc('#'+idLbl);
 			
 			var idLblLine = this.id+'_lblLine';
@@ -576,6 +610,8 @@
 			ptLblCenter.y+= 15;
 			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
 			this.lableLine = jc('#'+idLblLine);
+			
+			this._reDraw();
 			
 			this._setChildMouseEvent(this.circleStart, 'crosshair');
 			this._setChildMouseEvent(this.circleEnd, 'crosshair');
@@ -586,7 +622,7 @@
 			dv.onObjectCreated(this);
 			
 			//unregister events
-			dv.imgLayer.click(null);
+			dv.unRegisterEvent(this, eventType.click);
 		}
 		
 		return;
@@ -596,7 +632,7 @@
 		var dv = this.parent;
 		if(!this.isCreated){
 			//unregister events
-			dv.imgLayer.click(null);
+			dv.unRegisterEvent(this, eventType.click);
 		}
 		
 		if(this.circleStart){
@@ -699,6 +735,9 @@
 		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
 		ptLblCenter.y+= 15;
 		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y - 5]]);
+		
+		var msg = "length: " + countDistance(this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y);
+		this.label.string(msg);
 	}
 	
 	//export definitiens

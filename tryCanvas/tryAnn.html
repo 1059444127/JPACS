@@ -11,40 +11,59 @@
 				background-color: #F0F8FF;
 			}
 			
+			canvas.selected{
+				background-color: #F0F8FF;
+			    border: red;
+    			border-style: solid;
+   	 			border-width: thin;
+			}
 			.toolbarGroup input{
-				width: 50px;
+				width: 60px;
 			}
 		</style>
 		<script>
 			window.onload = function(){
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
-					$('#btnAddLine').on('click', function(){
-						var aLine = v1.createLine();
-
-					});
 					
-					$('#btnAddRect').on('click', function(){
-						var aRect = v1.createRect();
-					});
-				});
-				
-				
-				
-				$('#btnSelect').on('click', function(){
-					v1.setContext(viewContext.select);
-					v2.setContext(viewContext.select);
-				});
-				
-				$('#btnPan').on('click', function(){
-					v1.setContext(viewContext.pan);
-					v2.setContext(viewContext.pan);
 				});
 				
 				var v2 = new dicomViewer();
-				v2.initialize('c2', 'img/img1.jpg');
+				v2.initialize('c2', 'img/img2.jpg', function(){
+					
+				});
 				
-				//v2.addRect(10, 10, 50, 50);
+				var curViewer = v1;
+				$('#c1').on('click', function(){
+					$('#c1').addClass('selected');
+					$('#c2').removeClass('selected');
+					
+					curViewer = v1;
+				});
+				
+				$('#c2').on('click', function(){
+					$('#c2').addClass('selected');
+					$('#c1').removeClass('selected');
+					
+					curViewer = v2;
+				})
+			
+				$('#btnAddLine').on('click', function(){
+					var aLine = curViewer.createLine();
+				});
+				
+				$('#btnAddRect').on('click', function(){
+					var aRect = curViewer.createRect();
+				});
+				
+				$('#btnSelect').on('click', function(){
+					curViewer.setContext(viewContext.select);
+				});
+				
+				$('#btnPan').on('click', function(){
+					curViewer.setContext(viewContext.pan);
+				});
+				
 			}
 		</script>
 	</head>
@@ -61,8 +80,8 @@
 			</table>
 		</div>
 		<div>
-			<canvas id='c1' width="400" height="400"></canvas>
-			<canvas id='c2' width="400" height="400"></canvas>
+			<canvas id='c1' width="800" height="500" class='selected'></canvas>
+			<canvas id='c2' width="800" height="500"></canvas>
 		</div>
 	</body>
 </html>
