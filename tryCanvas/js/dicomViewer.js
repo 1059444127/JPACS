@@ -387,13 +387,12 @@
 		return aLine;
 	}
 	
-	dicomViewer.prototype.onObjectCreated = function(obj){
+	dicomViewer.prototype._onObjectCreated = function(obj){
 		if(obj && obj.isCreated){
 			//finish create
-			this.curSelectObj = obj;
+			this.annotationList.push(obj);
 			this.curContext = viewContext.select;
-			this.annotationList.push(this.curSelectObj);
-			this.curSelectObj.setEdit(true);
+			this.selectObject(obj);
 		}
 	}
 	
@@ -412,7 +411,7 @@
 	dicomViewer.prototype.reset = function(value){
 		this.imgLayer.transform(1,0,0,1,0,0, true);
 	}
-		
+	//serialize to json string
 	dicomViewer.prototype.serialize = function(){
 		var str = "{version:{0},annObjects:{1},overlay:{2}}";
 		
@@ -444,6 +443,32 @@
 		return str;
 	}
 	
+	dicomViewer.prototype.deSerialize = function(strJSON){
+		var jsonObj = (new Function("return " + strJSON))(); 
+		if(jsonObj){
+			var dv = this;
+			var version = jsonObj.version;
+			var annObjs = jsonObj.annObjects;
+			var overlay = jsonObj.overlay;
+			
+			annObjs.forEach(function(obj){
+				var type = obj.type;
+				switch(type){
+					case 'rect':
+						new annRect(dv).deSerialize(obj);
+						break;
+					case 'line':
+						new annLine(dv).deSerialize(obj);
+						break;
+					default:
+						break;
+				}
+			});
+			
+			dv.selectObject();
+		}
+	}
+	
 	/*********************************
 	 * the dicomTag definition
 	 */
@@ -453,16 +478,32 @@
 		this.element = element;
 		this.value = value;
 	}
+
 	
-		
 	/*********************************
 	 * the overlay definition
 	 */
+	
+	var overlayConfigure = {
+		color: '#ff0000',
+		font-size: '15px'
+	};
+	
 	function overlay(tag, pos){
 		this.tag = tag;
 		this.position = pos;
+		this.prefix = "";
+		this.show = true;
 	}
 	
+	overlay.prototype.show = function(viewer){
+		this.parent = viewer;
+		this.id = viewer._newObjectId();
+		
+		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
+		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+		this.label = jc('#'+idLbl);
+	}
 	
 	/*********************************
 	 * the annObject class
@@ -519,7 +560,6 @@
 				var ptImg = screenToImage(arg, transTmp);
 				
 				if (typeof(this._lastPos.x) != 'undefined') {
-	
 					var deltaX = ptImg.x - this._lastPos.x;
 					var deltaY = ptImg.y - this._lastPos.y;
 					
@@ -530,11 +570,7 @@
 					}
 				}
 				
-				this._lastPos = {
-					x: ptImg.x,
-					y: ptImg.y
-				};
-				
+				this._lastPos = { x: ptImg.x, y: ptImg.y};			
 				return true;
 			}
 		});
@@ -602,7 +638,7 @@
 		var dv = this.parent;
 		if(this.curStep == stepEnum.step2){
 			this.isCreated = true;
-			dv.onObjectCreated(this);
+			dv._onObjectCreated(this);
 			
 			dv.unRegisterEvent(this, eventType.mouseDown);
 			dv.unRegisterEvent(this, eventType.mouseMove);
@@ -710,6 +746,19 @@
 		return result;
 	}
 	
+	annRect.prototype.deSerialize = function(jsonObj){
+		if(jsonObj){
+			var ptStart = jsonObj.ptStart;
+			var width = jsonObj.width;
+			var height = jsonObj.height;
+			
+			this.startCreate();
+			this.onMouseDown(ptStart);
+			this.onMouseMove({x:ptStart.x + width, y:ptStart.y+height});
+			this.onMouseUp();
+		}
+	}
+	
 	/*********************************
 	 * the annLine class
 	 */
@@ -790,7 +839,7 @@
 			this._setChildMouseEvent(this.label);
 			
 			this.isCreated = true;
-			dv.onObjectCreated(this);
+			dv._onObjectCreated(this);
 			
 			//unregister events
 			dv.unRegisterEvent(this, eventType.click);
@@ -866,14 +915,12 @@
 		var lbl = aLine.label;
 		
 		this._setChildDraggable(cs, draggable, function(deltaX, deltaY){
-			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};
-					
+			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};					
 			aLine._reDraw();		
 		});
 		
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY){
-			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
-			
+			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};		
 			aLine._reDraw();
 		});
 		
@@ -920,6 +967,16 @@
 		result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y));
 		
 		return result;
+	}
+	
+	annLine.prototype.deSerialize = function(jsonObj){
+		if(jsonObj){
+			this.startCreate();
+			var ptStart = jsonObj.ptStart;
+			this.onClick(ptStart);
+			var ptEnd = jsonObj.ptEnd;
+			this.onClick(ptEnd);		
+		}
 	}
 	
 	//export definitiens
