@@ -12,13 +12,13 @@
 	var stepEnum = {step1:1, step2:2, step3:3, step4:4, step5:5};
 
 	//define colors
-	var colors = {white:'#ffffff', red:'#ff0000'};
+	var colors = {white:'#ffffff', red:'#ff0000', yellow:'#ffff00'};
 	
 	//define event type
-	var eventType = {click:1, mouseDown:2, mouseMove:3, mouseUp:4, mouseOver:5, mouseOut:6, rightClick:7, dblClick:8};
+	var eventType = {click:1, mouseDown:2, mouseMove:3, mouseUp:4, mouseOver:5, mouseOut:6, rightClick:7, dblClick:8, mouseWheel:9};
 	
-	function screenToImage(x, y, imgTrans){
-	
+	function screenToImage(pt, imgTrans){
+		var x = pt.x, y = pt.y;
 		var imgPt = [0,0,1];
 		var scrennPt = [x, y, 1];
 		
@@ -36,8 +36,8 @@
 		return {x: imgPt[0], y:imgPt[1]};
 	}
 	
-	function imageToScreen(x, y, trans){
-		
+	function imageToScreen(pt, trans){
+		var x = pt.x, y = pt.y;
 		var imgPt = [x, y, 1];
 		var screenPt = [0, 0, 1];
 	
@@ -60,11 +60,36 @@
 		return "viewer_" + globalViewerId;
 	}
 	
+	String.prototype.format = function(args) {
+	    var result = this;
+	    if (arguments.length > 0) {    
+	        if (arguments.length == 1 && typeof (args) == "object") {
+	            for (var key in args) {
+	                if(args[key]!=undefined){
+	                    var reg = new RegExp("({" + key + "})", "g");
+	                    result = result.replace(reg, args[key]);
+	                }
+	            }
+	        }
+	        else {
+	            for (var i = 0; i < arguments.length; i++) {
+	                if (arguments[i] != undefined) {
+	                    //var reg = new RegExp("({[" + i + "]})", "g");//这个在索引大于9时会有问题，谢谢何以笙箫的指出
+	　　　　　　　　　　　　var reg= new RegExp("({)" + i + "(})", "g");
+	                    result = result.replace(reg, arguments[i]);
+	                }
+	            }
+	        }
+	    }
+	    return result;
+	}
+	
 	/*********************************
 	 * the dicomViewer class
 	 */
 	
 	function dicomViewer(){
+		this.version = 1;//for serialize
 		this.id = newViewerId();
 		this.annotationList = [];
 		this.overlayList = [];
@@ -91,6 +116,7 @@
 		
 		dv.canvas = document.getElementById(canvasId);
 		dv.canvas.oncontextmenu = function(evt){dv.onContextMenu.call(dv, evt);};
+		dv.canvas.onmousewheel = function(evt){dv.onMouseWheel.call(dv, evt);};
 
 		var dImg = new Image();
 		dImg.onload = function(){
@@ -102,7 +128,11 @@
 			dv.imgLayer.mousedown(function(arg){dv.onMouseDown.call(dv, arg)});	
 			dv.imgLayer.mousemove(function(arg){dv.onMouseMove.call(dv, arg)});	
 			dv.imgLayer.mouseup(function(arg){dv.onMouseUp.call(dv, arg)});	
-			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});
+			dv.imgLayer.click(function(arg){dv.onClick.call(dv, arg)});dv.canvas
+			
+			var idOverlay = dv._newObjectId();
+			jc.text('', 5, 15).id(idOverlay).color(colors.red).font('15px Times New Roman');
+			dv.overlay1 = jc('#'+idOverlay);
 			
 			//show image
 			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
@@ -166,38 +196,82 @@
 			return;
 		}
 		
-		var ptImg = screenToImage(arg.x, arg.y, this.imgLayer.transform());
+		if(arg.x){
+			arg = screenToImage(arg, this.imgLayer.transform());
+		}
+		
 		handlers.forEach(function(obj){
 			if(obj[handler]){
-				obj[handler]({x:ptImg.x, y:ptImg.y});
+				obj[handler](arg);
 			}
 		});
 	}
 	
-	dicomViewer.prototype.onClick = function(arg){
-		this._handleEvent(arg, eventType.click, 'onClick');
+	dicomViewer.prototype.onKeyPress = function(key){
+		alert(key.code);	
 	}
 	
-	dicomViewer.prototype.onMouseDown = function(arg){
+	dicomViewer.prototype.onClick = function(evt){
+		this._handleEvent(evt, eventType.click, 'onClick');
+	}
+	
+	dicomViewer.prototype.onMouseDown = function(evt){
 		//if in select context, and not click any object, will unselect all objects.
-		if(!arg.event.cancelBubble && this.curContext == viewContext.select){
+		if(this.curContext == viewContext.select){
+			if(!evt.event.cancelBubble){
+				if(this.curSelectObj && this.curSelectObj.setEdit){
+					this.curSelectObj.setEdit(false);
+					this.curSelectObj = undefined;
+				}
+				
+				this.draggable(true);
+			}
+			else{
+				this.draggable(false);
+			}
+		}
+		
+		if(!evt.event.cancelBubble && this.curContext == viewContext.select){
 			
 			if(this.curSelectObj && this.curSelectObj.setEdit){
 				this.curSelectObj.setEdit(false);
 			}
 		}
 		
-		this._handleEvent(arg, eventType.mouseDown, 'onMouseDown');
+		this._handleEvent(evt, eventType.mouseDown, 'onMouseDown');
 	}
 	
-	dicomViewer.prototype.onMouseMove = function(arg){
-		this._handleEvent(arg, eventType.mouseMove, 'onMouseMove');
-	}
-	
-	dicomViewer.prototype.onMouseUp = function(arg){
-		this._handleEvent(arg, eventType.mouseUp, 'onMouseUp');
-	}
+	dicomViewer.prototype.onMouseMove = function(evt){
+		this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
 		
+		//temp, 
+		var str = this.serialize();
+		this.overlay1.string(str);
+	}
+	
+	dicomViewer.prototype.onMouseUp = function(evt){
+		this._handleEvent(evt, eventType.mouseUp, 'onMouseUp');
+	}
+	
+	dicomViewer.prototype.onMouseWheel = function(evt){
+		var scaleValue = 1;
+		if(evt.wheelDelta /120 > 0){
+			//up
+			scaleValue = 0.9;
+		}
+		else{//down
+			scaleValue = 1.1;
+		}
+		
+		this.imgLayer.scale(scaleValue);
+		
+		this._handleEvent(scaleValue, eventType.mouseWheel, 'onMouseWheel');
+		
+		evt.stopImmediatePropagation();
+		evt.stopPropagation();
+		evt.preventDefault();
+	}
+	
 	dicomViewer.prototype.onContextMenu = function(evt){
 		
 		if(this.curContext == viewContext.create){
@@ -231,7 +305,7 @@
 		var lastContext = this.curContext;
 		
 		if(lastContext !== ctx){
-			var draggable = ctx == viewContext.pan;
+			var draggable = (ctx == viewContext.pan) || (ctx == viewContext.sele && this.curSelectObj == null);
 			this.draggable(draggable);
 			
 			this.curContext = ctx;
@@ -276,8 +350,19 @@
 		if(obj && obj instanceof annObject){
 			obj.delete();
 			
-			if(this.annotationList.contains(obj)){
-				this.annotationList.remove(obj);
+			var i = 0, len = this.annotationList.length;
+			for(i=0; i<len; i++){
+				if(this.annotationList[i] === obj){
+					found = true;
+					break;
+				}
+			}
+			
+			if(found){
+				this.annotationList.splice(i, 1);
+				if(this.curSelectObj === obj){
+					this.curSelectObj = undefined;
+				}
 			}
 		}
 	}
@@ -310,6 +395,53 @@
 			this.annotationList.push(this.curSelectObj);
 			this.curSelectObj.setEdit(true);
 		}
+	}
+	
+	dicomViewer.prototype.rotate = function(angle){
+		if(angle > 0){
+			this.imgLayer.rotate(angle, 'center');
+		}
+	}
+	
+	dicomViewer.prototype.scale = function(value){
+		if(value > 0){
+			this.imgLayer.scale(value);
+		}
+	}
+	
+	dicomViewer.prototype.reset = function(value){
+		this.imgLayer.transform(1,0,0,1,0,0, true);
+	}
+		
+	dicomViewer.prototype.serialize = function(){
+		var str = "{version:{0},annObjects:{1},overlay:{2}}";
+		
+		var strAnnObjs = "[";	
+		if(this.annotationList){
+			var i = 0, len = this.annotationList.length;
+			for(i=0;i<len;i++){
+				strAnnObjs += this.annotationList[i].serialize();
+				if(i < len - 1){
+					strAnnObjs += ",";
+				}
+			}
+		}
+		strAnnObjs += "]";
+		
+		var strOverlay = "[";
+		if(this.overlayList){
+			var i=0, len = this.overlayList.length;
+			for(i=0;i<len;i++){
+				strOverlay += this.overlayList[i].serialize();
+				if(i<len-1){
+					strOverlay += ",";
+				}
+			}
+		}
+		strOverlay += "]"
+		
+		str = str.format(this.version,strAnnObjs, strOverlay);
+		return str;
 	}
 	
 	/*********************************
@@ -384,7 +516,7 @@
 				this._lastPos = {};
 			},
 			drag: function(arg){
-				var ptImg = screenToImage(arg.x, arg.y, transTmp);
+				var ptImg = screenToImage(arg, transTmp);
 				
 				if (typeof(this._lastPos.x) != 'undefined') {
 	
@@ -498,6 +630,21 @@
 			dv.unRegisterEvent(this, eventType.mouseMove);
 			dv.unRegisterEvent(this, eventType.mouseUp);
 		}
+		
+		if(this.rect){
+			this.rect.del();
+			this.rect = undefined;
+		}
+		
+		if(this.circleA){
+			this.circleA.del();
+			this.circleA = undefined;
+		}
+		
+		if(this.label){
+			this.label.del();
+			this.label = undefined;
+		}
 	}
 	
 	annRect.prototype.setEdit = function(edit){
@@ -519,6 +666,7 @@
 	
 	annRect.prototype.updateLabel = function(){
 		var size = 2*(this.width + this.height);
+		size = Math.round(size*100)/100;
 		var msg = "size=" + size;
 		
 		this.label.string(msg);
@@ -526,17 +674,26 @@
 	
 	annRect.prototype.setDraggable = function(draggable){
 		var aRect = this;
-		var transTmp = this.parent.imgLayer.transform();
-		
+	
 		this._setChildDraggable(this.rect, draggable, function(deltaX, deltaY){
 			aRect.circleA.translate(deltaX, deltaY);
 			aRect.label.translate(deltaX, deltaY);
+			
+			var x = aRect.rect._x + aRect.rect._transformdx;
+			var y = aRect.rect._y + aRect.rect._transformdy;
+			
+			aRect.ptStart = {x:x, y:y};
 		});
 		
 		this._setChildDraggable(this.circleA, draggable, function(deltaX, deltaY){
 			aRect.rect.translate(deltaX, deltaY);
 			aRect.rect._width -= deltaX;
 			aRect.rect._height -= deltaY;
+			
+			var x = aRect.rect._x + aRect.rect._transformdx;
+			var y = aRect.rect._y + aRect.rect._transformdy;
+			aRect.ptStart = {x:x, y:y};
+			
 			aRect.width = aRect.rect._width;
 			aRect.height = aRect.rect._height;
 			aRect.label.translate(deltaX, deltaY);	
@@ -544,6 +701,13 @@
 		});
 		
 		this._setChildDraggable(this.label, draggable);
+	}
+	
+	annRect.prototype.serialize = function(){
+		var result = "{type:'rect',ptStart:{x:{0},y:{1}},width:{2},height:{3}}";
+		result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height));
+		
+		return result;
 	}
 	
 	/*********************************
@@ -563,6 +727,13 @@
 		this.curStep = stepEnum.step1;
 		
 		dv.registerEvent(this, eventType.click);
+		dv.registerEvent(this, eventType.mouseWheel);
+	}
+	
+	annLine.prototype.onMouseWheel = function(scale){
+		if(this.label){
+			this._reDraw();
+		}
 	}
 	
 	annLine.prototype.onClick = function(arg){
@@ -606,7 +777,7 @@
 			
 			var idLblLine = this.id+'_lblLine';
 			var ptLblCenter = this.label.getCenter();
-			ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
+			ptLblCenter = screenToImage(ptLblCenter, dv.imgLayer.transform());
 			ptLblCenter.y+= 15;
 			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
 			this.lableLine = jc('#'+idLblLine);
@@ -656,6 +827,11 @@
 			this.lableLine = undefined;
 		}
 		
+		if(this.line){
+			this.line.del();
+			this.line = undefined;
+		}
+		
 		this.isCreated = false;
 	}
 	
@@ -683,8 +859,7 @@
 	
 	annLine.prototype.setDraggable = function(draggable){
 		var aLine = this;
-		var transTmp = this.parent.imgLayer.transform();
-		
+
 		var cs = aLine.circleStart;
 		var ce = aLine.circleEnd;
 		var cm = aLine.circleMiddle;
@@ -698,7 +873,7 @@
 		
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY){
 			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
-					
+			
 			aLine._reDraw();
 		});
 		
@@ -732,12 +907,19 @@
 		this.circleMiddle._transformdy = 0;
 		
 		var ptLblCenter = this.label.getCenter();
-		ptLblCenter = screenToImage(ptLblCenter.x, ptLblCenter.y, dv.imgLayer.transform());
+		ptLblCenter = screenToImage(ptLblCenter, dv.imgLayer.transform());
 		ptLblCenter.y+= 15;
 		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y - 5]]);
 		
 		var msg = "length: " + countDistance(this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y);
 		this.label.string(msg);
+	}
+	
+	annLine.prototype.serialize = function(){
+		var result = "{type: 'line',ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}";
+		result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y));
+		
+		return result;
 	}
 	
 	//export definitiens

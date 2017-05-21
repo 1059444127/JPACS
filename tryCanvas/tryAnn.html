@@ -23,6 +23,10 @@
 		</style>
 		<script>
 			window.onload = function(){
+				
+				var strJSON = {version: 1,annObjecs: [{type: 'line',ptStart: {x:12,y:34},ptEnd: {x:33,y:22}},{type: 'rect',ptStart: {x:11,y:22},width: 123,height: 222}],overlay: []};
+				
+				
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
 					
@@ -64,6 +68,25 @@
 					curViewer.setContext(viewContext.pan);
 				});
 				
+				$('#btnRotate').on('click', function(){
+					curViewer.rotate(30);
+				});
+				
+				$('#btnReset').on('click', function(){
+					curViewer.reset();
+				});
+				
+				$('#btnDelete').on('click', function(){
+					var curObj = curViewer.curSelectObj;
+					if(curObj){
+						curViewer.deleteObject(curObj);
+					}
+				});
+				
+				$('#btnSave').on('click', function(){
+					var str = curViewer.serialize();
+					alert(str);
+				});
 			}
 		</script>
 	</head>
@@ -76,6 +99,9 @@
 					<td><input id='btnRotate' type="button" value='Rotate'></td>
 					<td><input id='btnAddRect' type="button" value='Rect'></td>
 					<td><input id='btnAddLine' type="button" value='Line'></td>
+					<td><input id='btnReset' type="button" value='Reset'></td>
+					<td><input id='btnDelete' type="button" value='Delete'></td>
+					<td><input id='btnSave' type="button" value='Save'></td>
 				</tr>
 			</table>
 		</div>
