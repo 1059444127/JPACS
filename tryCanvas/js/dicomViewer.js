@@ -784,9 +784,42 @@
 	}
 	
 	annLine.prototype.onMouseWheel = function(scale){
-		if(this.label){
-			this._reDraw();
+		if(!this.parent){
+			return;
 		}
+		
+		var trans = this.parent.imgLayer.transform();
+		var scale = trans[0][0];
+		
+		//change label font size
+		var fontSize = Math.round(15/scale);
+		if(fontSize < 10){
+			fontSize = 10;
+		}
+		
+		var font = "{0}px Times New Roman".format(fontSize);
+		this.label.font(font);
+		
+		//change circle radius
+		var radius = Math.round(5/scale);
+		if(radius < 1){
+			radius = 1;
+		}
+		
+		this.circleStart._radius = radius;
+		this.circleMiddle._radius = radius;
+		this.circleEnd._radius = radius;
+		
+		//change line size
+		var lineWidth = Math.round(1/scale);
+		if(lineWidth < 0.2){
+			lineWidth = 0.2;
+		}
+		this.circleStart._lineWidth = lineWidth;
+		this.circleMiddle._lineWidth = lineWidth;
+		this.circleEnd._lineWidth = lineWidth;
+		this.lableLine._lineWidth = lineWidth;
+		this.line._lineWidth = lineWidth;
 	}
 	
 	annLine.prototype.onClick = function(arg){
@@ -835,7 +868,7 @@
 			jc.line([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y-5]]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
 			this.lableLine = jc('#'+idLblLine);
 			
-			this._reDraw();
+			this._refresh();
 			
 			this._setChildMouseEvent(this.circleStart, 'crosshair');
 			this._setChildMouseEvent(this.circleEnd, 'crosshair');
@@ -878,12 +911,11 @@
 		if(this.lableLine){
 			this.lableLine.del();
 			this.lableLine = undefined;
-		}
-		
+		}	
 		if(this.line){
 			this.line.del();
 			this.line = undefined;
-		}
+		}	
 		
 		this.isCreated = false;
 	}
@@ -920,12 +952,12 @@
 		
 		this._setChildDraggable(cs, draggable, function(deltaX, deltaY){
 			aLine.ptStart = {x: cs._x, y:cs._y};					
-			aLine._reDraw();		
+			aLine._refresh();		
 		});
 		
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY){
 			aLine.ptEnd = {x: ce._x, y:ce._y};		
-			aLine._reDraw();
+			aLine._refresh();
 		});
 		
 		this._setChildDraggable(cm, draggable, function(deltaX, deltaY){
@@ -935,15 +967,15 @@
 			aLine.ptStart = {x: cs._x, y:cs._y};
 			aLine.ptEnd = {x: ce._x, y:ce._y};
 			
-			aLine._reDraw();
+			aLine._refresh();
 		});
 		
 		this._setChildDraggable(lbl, draggable, function(deltaX, deltaY){
-			aLine._reDraw();
+			aLine._refresh();
 		});
 	}
 	
-	annLine.prototype._reDraw = function(){
+	annLine.prototype._refresh = function(){
 		var dv = this.parent;
 		this.line.points([[this.ptStart.x, this.ptStart.y],[this.ptEnd.x, this.ptEnd.y]]);
 		
