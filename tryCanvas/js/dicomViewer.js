@@ -499,9 +499,9 @@
 		this.parent = viewer;
 		this.id = viewer._newObjectId();
 		
-		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
-		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-		this.label = jc('#'+idLbl);
+//		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
+//		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+//		this.label = jc('#'+idLbl);
 	}
 	
 	/*********************************
@@ -556,13 +556,16 @@
 				this._lastPos = {};
 			},
 			drag: function(arg){
+				//ptImg is mouse position, not the object's start position
+				//don't translate any annObject, always keep annObject's transform is clear.
 				var ptImg = screenToImage(arg, transTmp);
 				
 				if (typeof(this._lastPos.x) != 'undefined') {
 					var deltaX = ptImg.x - this._lastPos.x;
 					var deltaY = ptImg.y - this._lastPos.y;
 					
-					this.translate(deltaX, deltaY);
+					this._x += deltaX;
+					this._y += deltaY;
 					
 					if(onDrag){
 						onDrag.call(annObj, deltaX, deltaY);
@@ -573,6 +576,13 @@
 				return true;
 			}
 		});
+	}
+	
+	annObject.prototype._translateChild = function(child, deltaX, deltaY){
+		if(child){
+			child._x += deltaX;
+			child._y += deltaY;
+		}
 	}
 	
 	/*********************************
@@ -660,7 +670,6 @@
 	annRect.prototype.delete = function(){
 		var dv = this.parent;
 		if(!this.isCreated){
-			//unregister events
 			dv.unRegisterEvent(this, eventType.mouseDown);
 			dv.unRegisterEvent(this, eventType.mouseMove);
 			dv.unRegisterEvent(this, eventType.mouseUp);
@@ -711,31 +720,27 @@
 		var aRect = this;
 	
 		this._setChildDraggable(this.rect, draggable, function(deltaX, deltaY){
-			aRect.circleA.translate(deltaX, deltaY);
-			aRect.label.translate(deltaX, deltaY);
-			
-			var x = aRect.rect._x + aRect.rect._transformdx;
-			var y = aRect.rect._y + aRect.rect._transformdy;
-			
-			aRect.ptStart = {x:x, y:y};
+			aRect._translateChild(aRect.circleA, deltaX, deltaY);
+			aRect._translateChild(aRect.label, deltaX, deltaY);
+			aRect.ptStart = {x:aRect.rect._x, y:aRect.rect._y};
 		});
 		
 		this._setChildDraggable(this.circleA, draggable, function(deltaX, deltaY){
-			aRect.rect.translate(deltaX, deltaY);
+			aRect._translateChild(aRect.rect, deltaX, deltaY);
 			aRect.rect._width -= deltaX;
 			aRect.rect._height -= deltaY;
 			
-			var x = aRect.rect._x + aRect.rect._transformdx;
-			var y = aRect.rect._y + aRect.rect._transformdy;
-			aRect.ptStart = {x:x, y:y};
-			
+			aRect.ptStart = {x:aRect.rect._x, y:aRect.rect._y};
+		
 			aRect.width = aRect.rect._width;
 			aRect.height = aRect.rect._height;
-			aRect.label.translate(deltaX, deltaY);	
+			
+			aRect._translateChild(aRect.label, deltaX, deltaY);
 			aRect.updateLabel();
 		});
 		
-		this._setChildDraggable(this.label, draggable);
+		this._setChildDraggable(this.label, draggable, function(deltaX, deltaY){
+		});
 	}
 	
 	annRect.prototype.serialize = function(){
@@ -914,23 +919,21 @@
 		var lbl = aLine.label;
 		
 		this._setChildDraggable(cs, draggable, function(deltaX, deltaY){
-			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};					
+			aLine.ptStart = {x: cs._x, y:cs._y};					
 			aLine._reDraw();		
 		});
 		
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY){
-			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};		
+			aLine.ptEnd = {x: ce._x, y:ce._y};		
 			aLine._reDraw();
 		});
 		
 		this._setChildDraggable(cm, draggable, function(deltaX, deltaY){
-			cm.translate(-deltaX, -deltaY);
-			
-			cs.translate(deltaX, deltaY);
-			ce.translate(deltaX, deltaY);
-			
-			aLine.ptStart = {x: cs._x+cs._transformdx, y:cs._y+cs._transformdy};
-			aLine.ptEnd = {x: ce._x+ce._transformdx, y:ce._y+ce._transformdy};
+			aLine._translateChild(cs, deltaX, deltaY);
+			aLine._translateChild(ce, deltaX, deltaY);
+
+			aLine.ptStart = {x: cs._x, y:cs._y};
+			aLine.ptEnd = {x: ce._x, y:ce._y};
 			
 			aLine._reDraw();
 		});
@@ -949,11 +952,9 @@
 		ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;	
 		this.circleMiddle._x = ptMiddle.x;
 		this.circleMiddle._y = ptMiddle.y;
-		this.circleMiddle._transformdx = 0;
-		this.circleMiddle._transformdy = 0;
 		
-		var lblStartX = this.label._x +this.label._transformdx;
-		var lblStartY = this.label._y +this.label._transformdy;
+		var lblStartX = this.label._x;
+		var lblStartY = this.label._y;
 		
 		lblStartY.y+= 15;
 		this.lableLine.points([[lblStartX, lblStartY],[ptMiddle.x, ptMiddle.y - 5]]);
