@@ -73,9 +73,8 @@
 	        }
 	        else {
 	            for (var i = 0; i < arguments.length; i++) {
-	                if (arguments[i] != undefined) {
-	                    //var reg = new RegExp("({[" + i + "]})", "g");//这个在索引大于9时会有问题，谢谢何以笙箫的指出
-	　　　　　　　　　　　　var reg= new RegExp("({)" + i + "(})", "g");
+                	if (arguments[i] != undefined) {
+	　　　　　　　　　　　　		var reg= new RegExp("({)" + i + "(})", "g");
 	                    result = result.replace(reg, arguments[i]);
 	                }
 	            }
@@ -486,7 +485,7 @@
 	
 	var overlayConfigure = {
 		color: '#ff0000',
-		font-size: '15px'
+		fontSize: '15px'
 	};
 	
 	function overlay(tag, pos){
@@ -820,7 +819,7 @@
 			this.circleMiddle = jc('#'+idCircleM);
 			
 			var idLbl = this.id+'_lbl';
-			var lblPos = {x:this.ptStart.x +5, y:this.ptStart.y-5};
+			var lblPos = {x:ptMiddle.x +5, y:ptMiddle.y-5};
 			jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 			this.label = jc('#'+idLbl);
 			
@@ -953,10 +952,11 @@
 		this.circleMiddle._transformdx = 0;
 		this.circleMiddle._transformdy = 0;
 		
-		var ptLblCenter = this.label.getCenter();
-		ptLblCenter = screenToImage(ptLblCenter, dv.imgLayer.transform());
-		ptLblCenter.y+= 15;
-		this.lableLine.points([[ptLblCenter.x, ptLblCenter.y],[ptMiddle.x, ptMiddle.y - 5]]);
+		var lblStartX = this.label._x +this.label._transformdx;
+		var lblStartY = this.label._y +this.label._transformdy;
+		
+		lblStartY.y+= 15;
+		this.lableLine.points([[lblStartX, lblStartY],[ptMiddle.x, ptMiddle.y - 5]]);
 		
 		var msg = "length: " + countDistance(this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y);
 		this.label.string(msg);
