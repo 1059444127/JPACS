@@ -84,13 +84,44 @@
 		};
 	}
 
-	function countDistance(x1, y1, x2, y2) {
-		var value = Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2);
+	function countDistance(pt1, pt2) {
+		var value = Math.pow((pt1.x - pt2.x), 2) + Math.pow((pt1.y - pt2.y), 2);
 		value = Math.sqrt(value);
 
-		return Math.round(value * 100) / 100;
+		return value;
 	}
 
+	var _dDelta = 0.0000000001;
+
+	function getSineTheta(pt1, pt2) {
+		var dDistance = countDistance(pt1, pt2);
+		if(Math.abs(dDistance) < _dDelta) {
+			return 0.0;
+		} else {
+			var dSineTheta = -(Math.abs(pt1.y - pt2.y)) / dDistance;
+			if(pt1.y > pt2.y) {
+				return dSineTheta;
+			} else {
+				return -dSineTheta;
+			}
+		}
+	}
+
+	// get the line cosine theta
+	function getCosineTheta(pt1, pt2) {
+		var dDistance = countDistance(pt1, pt2);
+		if(Math.abs(dDistance) < _dDelta) {
+			return 0.0;
+		} else {
+			var dCosineTheta = (Math.abs(pt1.x - pt2.x)) / dDistance;
+			if(pt1.x < pt2.x) {
+				return dCosineTheta;
+			} else {
+				return -dCosineTheta;
+			}
+		}
+	}
+	
 	var globalViewerId = 1;
 
 	function newViewerId() {
@@ -931,7 +962,7 @@
 			var ptMiddle = {};
 			ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
 			ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
-			jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colors.white);
+			jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colors.white).opacity(0);
 			this.circleMiddle = jc('#' + idCircleM);
 
 			var idLbl = this.id + '_lbl';
@@ -945,10 +976,10 @@
 			var idLblLine = this.id + '_lblLine';
 			var ptLblCenter = this.label.getCenter();
 			ptLblCenter = screenToImage(ptLblCenter, dv.imgLayer.transform());
-			ptLblCenter.y += 15;
+			//ptLblCenter.y += 15;
 			jc.line([
 				[ptLblCenter.x, ptLblCenter.y],
-				[ptMiddle.x, ptMiddle.y - 5]
+				[ptMiddle.x, ptMiddle.y]
 			]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
 			this.lableLine = jc('#' + idLblLine);
 
@@ -1000,7 +1031,14 @@
 			this.line.del();
 			this.line = undefined;
 		}
-
+		if(this.arrowLineA){
+			this.arrowLineA.del();
+			this.arrowLineA = undefined;
+		}
+		if(this.arrowLineB){
+			this.arrowLineB.del();
+			this.arrowLineB = undefined;
+		}
 		this.isCreated = false;
 	}
 
@@ -1014,7 +1052,9 @@
 			this.lableLine.color(colors.red);
 			this.circleStart.color(colors.red).opacity(1);
 			this.circleEnd.color(colors.red).opacity(1);
-			this.circleMiddle.color(colors.red).opacity(1);
+			this.circleMiddle.color(colors.red).opacity(0);
+			this.arrowLineA.color(colors.red);
+			this.arrowLineB.color(colors.red);
 		} else {
 			this.line.color(colors.white);
 			this.label.color(colors.white);
@@ -1022,6 +1062,8 @@
 			this.circleStart.color(colors.white).opacity(0);
 			this.circleEnd.color(colors.white).opacity(0);
 			this.circleMiddle.color(colors.white).opacity(0);
+			this.arrowLineA.color(colors.white);
+			this.arrowLineB.color(colors.white);
 		}
 	}
 
@@ -1083,25 +1125,22 @@
 		this.circleMiddle._x = ptMiddle.x;
 		this.circleMiddle._y = ptMiddle.y;
 
-		var lblStartX = this.label._x;
-		var lblStartY = this.label._y;
-
-		lblStartY.y += 15;
 		this.lableLine.points([
-			[lblStartX, lblStartY],
-			[ptMiddle.x, ptMiddle.y - 5]
+			[this.label._x, this.label._y],
+			[ptMiddle.x, ptMiddle.y]
 		]);
 
-		var msg = "length: " + countDistance(this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y);
+		var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) *100)/100;
 		this.label.string(msg);
 		
 		this._adjustSize();
 	}
-
+	
 	annLine.prototype._adjustSize = function(){
 		var trans = this.parent.imgLayer.transform();
 		var scale = trans[0][0];
-
+		var dv = this.parent;
+		
 		//change label font size
 		var fontSize = Math.round(15 / scale);
 		if(fontSize < 10) {
@@ -1130,7 +1169,52 @@
 		this.circleMiddle._lineWidth = lineWidth;
 		this.circleEnd._lineWidth = lineWidth;
 		this.lableLine._lineWidth = lineWidth;
-		this.line._lineWidth = lineWidth;	
+		this.line._lineWidth = lineWidth;
+		
+		//adjust arrow
+		var ptStart = {x: this.label._x, y:this.label._y};
+		var ptEnd = {x:this.circleMiddle._x, y:this.circleMiddle._y};
+		
+		var sineTheta = getSineTheta(ptEnd,ptStart);
+		var cosineTheta = getCosineTheta(ptEnd,ptStart);
+	
+		var dArrowLength = 10/scale;
+		
+		var ptNodeA = {}, ptNodeB = {};
+		ptNodeA.x = ptEnd.x + dArrowLength*cosineTheta - dArrowLength/2.0*sineTheta + 0.5;
+		ptNodeA.y = ptEnd.y + dArrowLength*sineTheta + dArrowLength/2.0*cosineTheta + 0.5;
+	
+		ptNodeB.x = ptEnd.x + dArrowLength*cosineTheta + dArrowLength/2.0*sineTheta + 0.5;
+		ptNodeB.y = ptEnd.y + dArrowLength*sineTheta - dArrowLength/2.0*cosineTheta + 0.5;
+	
+		if(!this.arrowLineA){
+			jc.line([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeA.x, ptNodeA.y]
+			]).id(this.id+"_arrowA").layer(dv.imgLayerId).color(colors.white);
+			this.arrowLineA = jc('#' + this.id+"_arrowA");
+		}else{
+			this.arrowLineA.points([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeA.x, ptNodeA.y]
+			]);
+		}
+		
+		if(!this.arrowLineB){
+			jc.line([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeB.x, ptNodeB.y]
+			]).id(this.id+"_arrowB").layer(dv.imgLayerId).color(colors.white);
+			this.arrowLineB = jc('#' + this.id+"_arrowB");
+		}else{
+			this.arrowLineB.points([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeB.x, ptNodeB.y]
+			]);
+		}
+		
+		this.arrowLineA._lineWidth = lineWidth;
+		this.arrowLineB._lineWidth = lineWidth;
 	}
 	
 	annLine.prototype.serialize = function() {
