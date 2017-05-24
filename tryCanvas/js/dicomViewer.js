@@ -324,10 +324,6 @@
 
 	dicomViewer.prototype.onMouseMove = function(evt) {
 		this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
-
-		//temp, 
-		var str = this.serialize();
-		this.overlay1.string(str);
 	}
 
 	dicomViewer.prototype.onMouseUp = function(evt) {
@@ -343,12 +339,16 @@
 			scaleValue = 1.1;
 		}
 
+		var ptPrevious = this.imgLayer.getCenter();
 		this.imgLayer.scale(scaleValue);
+		var ptNow = this.imgLayer.getCenter();
+		
+		this.imgLayer.translate(ptPrevious.x-ptNow.x, ptPrevious.y-ptNow.y);
 		
 		//adjust objects' size
 		this.annotationList.forEach(function(obj) {
-			if(obj._adjustSize) {
-				obj._adjustSize();
+			if(obj._resize) {
+				obj._resize();
 			}
 		});
 		
@@ -422,7 +422,7 @@
 				if(this.curSelectObj.isCreated) {
 					this.curSelectObj.setEdit(false);
 				} else {
-					this.curSelectObj.delete();
+					this.curSelectObj.del();
 				}
 			}
 
@@ -432,7 +432,7 @@
 
 	dicomViewer.prototype.deleteObject = function(obj) {
 		if(obj && obj instanceof annObject) {
-			obj.delete();
+			obj.del();
 
 			var i = 0,
 				len = this.annotationList.length;
@@ -497,10 +497,20 @@
 		this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
 		//adjust objects' size
 		this.annotationList.forEach(function(obj) {
-			if(obj._adjustSize) {
-				obj._adjustSize();
+			if(obj._resize) {
+				obj._resize();
 			}
 		});
+	}
+	
+	dicomViewer.prototype.getScale = function(){
+		var trans = this.imgLayer.transform();
+		var scale = Math.abs(trans[0][0]);
+		if(scale < 0.1){
+			scale = 0.1
+		};
+		
+		return scale;
 	}
 	
 	//serialize to json string
@@ -683,6 +693,120 @@
 	}
 
 	/*********************************
+	 * the annArrow class
+	 */
+
+	function annArrow(viewer){
+		annObject.call(this);
+		this.parent = viewer;
+		this.id = viewer._newObjectId();
+	}
+
+	annArrow.prototype = new annObject();
+	
+	//ptEnd points to the target, will with arrow
+	annArrow.prototype._reDraw = function(ptStart, ptEnd){
+		this.ptStart = ptStart;
+		this.ptEnd = ptEnd;
+		var dv = this.parent;
+		var scale = dv.getScale();
+		
+		if(!this.line){
+			var idLine = this.id +'_line';
+			jc.line([
+					[ptStart.x, ptStart.y],
+					[ptEnd.x, ptEnd.y]
+				]).id(idLine).layer(dv.imgLayerId).color(colors.white);
+			this.line = jc('#' + idLine);	
+		}else{
+			this.line.points([
+				[ptStart.x, ptStart.y],
+				[ptEnd.x, ptEnd.y]
+			]);
+		}
+
+		var sineTheta = getSineTheta(ptEnd,ptStart);
+		var cosineTheta = getCosineTheta(ptEnd,ptStart);
+	
+		var dArrowLength = 10/scale;
+		
+		var ptNodeA = {}, ptNodeB = {};
+		ptNodeA.x = ptEnd.x + dArrowLength*cosineTheta - dArrowLength/2.0*sineTheta;
+		ptNodeA.y = ptEnd.y + dArrowLength*sineTheta + dArrowLength/2.0*cosineTheta;
+	
+		ptNodeB.x = ptEnd.x + dArrowLength*cosineTheta + dArrowLength/2.0*sineTheta;
+		ptNodeB.y = ptEnd.y + dArrowLength*sineTheta - dArrowLength/2.0*cosineTheta;
+	
+		if(!this.arrowLineA){
+			jc.line([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeA.x, ptNodeA.y]
+			]).id(this.id+"_arrowA").layer(dv.imgLayerId).color(colors.white);
+			this.arrowLineA = jc('#' + this.id+"_arrowA");
+		}else{
+			this.arrowLineA.points([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeA.x, ptNodeA.y]
+			]);
+		}
+		
+		if(!this.arrowLineB){
+			jc.line([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeB.x, ptNodeB.y]
+			]).id(this.id+"_arrowB").layer(dv.imgLayerId).color(colors.white);
+			this.arrowLineB = jc('#' + this.id+"_arrowB");
+		}else{
+			this.arrowLineB.points([
+				[ptEnd.x, ptEnd.y],
+				[ptNodeB.x, ptNodeB.y]
+			]);
+		}
+		
+		var lineWidth = Math.round(1 / scale);
+		if(lineWidth < 0.2) {
+			lineWidth = 0.2;
+		}
+		
+		this.line._lineWidth = lineWidth;
+		this.arrowLineA._lineWidth = lineWidth;
+		this.arrowLineB._lineWidth = lineWidth;
+	}
+	
+	annArrow.prototype._resize = function(){
+		this._reDraw(this.ptStart, this.ptEnd);
+	}
+	
+	annArrow.prototype.del = function(){
+		if(this.line){
+			this.line.del();
+			this.line = undefined;
+		}
+		if(this.arrowLineA){
+			this.arrowLineA.del();
+			this.arrowLineA = undefined;
+		}
+		if(this.arrowLineB){
+			this.arrowLineB.del();
+			this.arrowLineB = undefined;
+		}
+	}
+	
+	annArrow.prototype.setEdit = function(edit){
+		this.isInEdit = edit;
+
+		if(edit) {
+			this.line.color(colors.red);
+			this.arrowLineA.color(colors.red);
+			this.arrowLineB.color(colors.red);
+		} else {
+			this.line.color(colors.white);
+			this.arrowLineA.color(colors.white);
+			this.arrowLineB.color(colors.white);
+		}
+	}
+	
+	/*********************************
 	 * the annRect class
 	 */
 
@@ -742,7 +866,7 @@
 				this._setChildMouseEvent(this.label);
 			}
 
-			this._refresh();
+			this._reDraw();
 		}
 	}
 
@@ -769,7 +893,7 @@
 		dv.registerEvent(this, eventType.mouseUp);
 	}
 
-	annRect.prototype.delete = function() {
+	annRect.prototype.del = function() {
 		var dv = this.parent;
 		if(!this.isCreated) {
 			dv.unRegisterEvent(this, eventType.mouseDown);
@@ -809,14 +933,14 @@
 		}
 	}
 
-	annRect.prototype._refresh = function() {
+	annRect.prototype._reDraw = function() {
 		var size = 2 * (this.width + this.height);
 		size = Math.round(size * 100) / 100;
 		var msg = "size=" + size;
 
 		this.label.string(msg);
 		
-		this._adjustSize();
+		this._resize();
 	}
 
 	annRect.prototype.setDraggable = function(draggable) {
@@ -845,13 +969,13 @@
 			aRect.height = aRect.rect._height;
 
 			aRect._translateChild(aRect.label, deltaX, deltaY);
-			aRect._refresh();
+			aRect._reDraw();
 		});
 
 		this._setChildDraggable(this.label, draggable, function(deltaX, deltaY) {});
 	}
 	
-	annRect.prototype._adjustSize = function(){
+	annRect.prototype._resize = function(){
 		var trans = this.parent.imgLayer.transform();
 		var scale = trans[0][0];
 
@@ -967,23 +1091,15 @@
 
 			var idLbl = this.id + '_lbl';
 			var lblPos = {
-				x: ptMiddle.x + 5,
-				y: ptMiddle.y - 5
+				x: ptMiddle.x,
+				y: ptMiddle.y
 			};
 			jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 			this.label = jc('#' + idLbl);
 
-			var idLblLine = this.id + '_lblLine';
-			var ptLblCenter = this.label.getCenter();
-			ptLblCenter = screenToImage(ptLblCenter, dv.imgLayer.transform());
-			//ptLblCenter.y += 15;
-			jc.line([
-				[ptLblCenter.x, ptLblCenter.y],
-				[ptMiddle.x, ptMiddle.y]
-			]).id(idLblLine).layer(dv.imgLayerId).color(colors.white);
-			this.lableLine = jc('#' + idLblLine);
+			this.arrow = new annArrow(this.parent);
 
-			this._refresh();
+			this._reDraw();
 
 			this._setChildMouseEvent(this.circleStart, 'crosshair');
 			this._setChildMouseEvent(this.circleEnd, 'crosshair');
@@ -1000,7 +1116,7 @@
 		return;
 	}
 
-	annLine.prototype.delete = function() {
+	annLine.prototype.del = function() {
 		var dv = this.parent;
 		if(!this.isCreated) {
 			//unregister events
@@ -1023,22 +1139,15 @@
 			this.label.del();
 			this.label = undefined;
 		}
-		if(this.lableLine) {
-			this.lableLine.del();
-			this.lableLine = undefined;
+		if(this.arrow) {
+			this.arrow.del();
+			this.arrow = undefined;
 		}
 		if(this.line) {
 			this.line.del();
 			this.line = undefined;
 		}
-		if(this.arrowLineA){
-			this.arrowLineA.del();
-			this.arrowLineA = undefined;
-		}
-		if(this.arrowLineB){
-			this.arrowLineB.del();
-			this.arrowLineB = undefined;
-		}
+
 		this.isCreated = false;
 	}
 
@@ -1049,22 +1158,19 @@
 		if(edit) {
 			this.line.color(colors.red);
 			this.label.color(colors.red);
-			this.lableLine.color(colors.red);
 			this.circleStart.color(colors.red).opacity(1);
 			this.circleEnd.color(colors.red).opacity(1);
 			this.circleMiddle.color(colors.red).opacity(0);
-			this.arrowLineA.color(colors.red);
-			this.arrowLineB.color(colors.red);
+
 		} else {
 			this.line.color(colors.white);
 			this.label.color(colors.white);
-			this.lableLine.color(colors.white);
 			this.circleStart.color(colors.white).opacity(0);
 			this.circleEnd.color(colors.white).opacity(0);
 			this.circleMiddle.color(colors.white).opacity(0);
-			this.arrowLineA.color(colors.white);
-			this.arrowLineB.color(colors.white);
 		}
+		
+		this.arrow.setEdit(edit);
 	}
 
 	annLine.prototype.setDraggable = function(draggable) {
@@ -1080,7 +1186,7 @@
 				x: cs._x,
 				y: cs._y
 			};
-			aLine._refresh();
+			aLine._reDraw();
 		});
 
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY) {
@@ -1088,7 +1194,7 @@
 				x: ce._x,
 				y: ce._y
 			};
-			aLine._refresh();
+			aLine._reDraw();
 		});
 
 		this._setChildDraggable(cm, draggable, function(deltaX, deltaY) {
@@ -1104,15 +1210,15 @@
 				y: ce._y
 			};
 
-			aLine._refresh();
+			aLine._reDraw();
 		});
 
 		this._setChildDraggable(lbl, draggable, function(deltaX, deltaY) {
-			aLine._refresh();
+			aLine._reDraw();
 		});
 	}
 
-	annLine.prototype._refresh = function() {
+	annLine.prototype._reDraw = function() {
 		var dv = this.parent;
 		this.line.points([
 			[this.ptStart.x, this.ptStart.y],
@@ -1125,21 +1231,17 @@
 		this.circleMiddle._x = ptMiddle.x;
 		this.circleMiddle._y = ptMiddle.y;
 
-		this.lableLine.points([
-			[this.label._x, this.label._y],
-			[ptMiddle.x, ptMiddle.y]
-		]);
-
 		var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) *100)/100;
 		this.label.string(msg);
 		
-		this._adjustSize();
+		this.arrow._reDraw({x:this.label._x, y:this.label._y}, ptMiddle);
+		
+		this._resize();
 	}
 	
-	annLine.prototype._adjustSize = function(){
-		var trans = this.parent.imgLayer.transform();
-		var scale = trans[0][0];
+	annLine.prototype._resize = function(){
 		var dv = this.parent;
+		var scale = dv.getScale();	
 		
 		//change label font size
 		var fontSize = Math.round(15 / scale);
@@ -1168,53 +1270,9 @@
 		this.circleStart._lineWidth = lineWidth;
 		this.circleMiddle._lineWidth = lineWidth;
 		this.circleEnd._lineWidth = lineWidth;
-		this.lableLine._lineWidth = lineWidth;
 		this.line._lineWidth = lineWidth;
 		
-		//adjust arrow
-		var ptStart = {x: this.label._x, y:this.label._y};
-		var ptEnd = {x:this.circleMiddle._x, y:this.circleMiddle._y};
-		
-		var sineTheta = getSineTheta(ptEnd,ptStart);
-		var cosineTheta = getCosineTheta(ptEnd,ptStart);
-	
-		var dArrowLength = 10/scale;
-		
-		var ptNodeA = {}, ptNodeB = {};
-		ptNodeA.x = ptEnd.x + dArrowLength*cosineTheta - dArrowLength/2.0*sineTheta + 0.5;
-		ptNodeA.y = ptEnd.y + dArrowLength*sineTheta + dArrowLength/2.0*cosineTheta + 0.5;
-	
-		ptNodeB.x = ptEnd.x + dArrowLength*cosineTheta + dArrowLength/2.0*sineTheta + 0.5;
-		ptNodeB.y = ptEnd.y + dArrowLength*sineTheta - dArrowLength/2.0*cosineTheta + 0.5;
-	
-		if(!this.arrowLineA){
-			jc.line([
-				[ptEnd.x, ptEnd.y],
-				[ptNodeA.x, ptNodeA.y]
-			]).id(this.id+"_arrowA").layer(dv.imgLayerId).color(colors.white);
-			this.arrowLineA = jc('#' + this.id+"_arrowA");
-		}else{
-			this.arrowLineA.points([
-				[ptEnd.x, ptEnd.y],
-				[ptNodeA.x, ptNodeA.y]
-			]);
-		}
-		
-		if(!this.arrowLineB){
-			jc.line([
-				[ptEnd.x, ptEnd.y],
-				[ptNodeB.x, ptNodeB.y]
-			]).id(this.id+"_arrowB").layer(dv.imgLayerId).color(colors.white);
-			this.arrowLineB = jc('#' + this.id+"_arrowB");
-		}else{
-			this.arrowLineB.points([
-				[ptEnd.x, ptEnd.y],
-				[ptNodeB.x, ptNodeB.y]
-			]);
-		}
-		
-		this.arrowLineA._lineWidth = lineWidth;
-		this.arrowLineB._lineWidth = lineWidth;
+		this.arrow._resize();
 	}
 	
 	annLine.prototype.serialize = function() {
