@@ -91,6 +91,12 @@
 						curViewer.deSerialize(serializedString);
 					}
 				});
+								
+				$('#btnBestFit').on('click', function(){
+					curViewer.bestFit();
+				});
+				
+				
 			}
 		</script>
 	</head>
@@ -101,7 +107,8 @@
 					<td><input id='btnSelect' type="button" value='Select'></td>
 					<td><input id='btnPan' type="button" value='Pan'></td>
 					<td><input id='btnRotate' type="button" value='Rotate'></td>
-					<td><input id='btnReset' type="button" value='Reset'></td>
+					<td><input id='btnReset' type="button" value='True Size' style="width:75px"></td>
+					<td><input id='btnBestFit' type="button" value='Best Fit'></td>
 					<td><input id='btnAddRect' type="button" value='Rect'></td>
 					<td><input id='btnAddLine' type="button" value='Line'></td>
 					<td><input id='btnDelete' type="button" value='Delete'></td>

@@ -150,6 +150,57 @@
 		}
 		return result;
 	}
+	
+	/*********************************
+	 * the dicomTag definition
+	 */
+
+	function dicomTag(group, element, value) {
+		this.group = group;
+		this.element = element;
+		this.value = value;
+	}
+
+	/*********************************
+	 * the overlay definition
+	 */
+
+	var overlaySetting = {
+		color: '#ff0000',
+		fontSize: '15px'
+	};
+
+	overlayPos = {
+		topLeft1 = 1,
+		topLeft2 = 2,
+		topLeft3 = 3,
+		topRight1 = 4,
+		topRight2 = 5,
+		topRight3 = 6,
+		bottomLeft1 = 7,
+		bottomLeft2 = 8,
+		bottomLeft3 = 9,
+		bottomRight1 = 10,
+		bottomRight2 = 11,
+		bottomRight3 = 12
+	};
+	
+	function overlay(group, element, pos, prefix) {
+		this.group = group;
+		this.element = element;
+		this.position = pos;
+		this.prefix = prefix;
+		this.isCreated = false;
+	}
+
+	overlay.prototype.show = function(viewer) {
+		this.parent = viewer;
+		this.id = viewer._newObjectId();
+
+		//		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
+		//		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+		//		this.label = jc('#'+idLbl);
+	}
 
 	/*********************************
 	 * the dicomViewer class
@@ -208,14 +259,13 @@
 			dv.imgLayer.click(function(arg) {
 				dv.onClick.call(dv, arg)
 			});
-			dv.canvas
 
 			var idOverlay = dv._newObjectId();
 			jc.text('', 5, 15).id(idOverlay).color(colors.red).font('15px Times New Roman');
 			dv.overlay1 = jc('#' + idOverlay);
 
 			//show image
-			jc.image(dv.dImg).id(dv.imgId).layer(dv.imgLayerId);
+			jc.image(dv.image).id(dv.imgId).layer(dv.imgLayerId);
 
 			dv.draggable(true);
 			dv.isReady = true;
@@ -223,14 +273,19 @@
 			if(callBack) {
 				callBack();
 			}
+			
+			dv.bestFit();
 		}
 
 		dImg.src = imgSrc;
-		this.dImg = dImg;
+		this.image = dImg;
 	}
 
 	dicomViewer.prototype.setDicomTags = function(tagList) {
 		this.dicomTagList = tagList;
+		
+		//tags value maybe changed, redraw overlay
+		this.drawOverlay();
 	}
 
 	dicomViewer.prototype.registerEvent = function(obj, type) {
@@ -347,8 +402,8 @@
 		
 		//adjust objects' size
 		this.annotationList.forEach(function(obj) {
-			if(obj._resize) {
-				obj._resize();
+			if(obj.onScale) {
+				obj.onScale();
 			}
 		});
 		
@@ -400,10 +455,17 @@
 		}
 	}
 
-	dicomViewer.prototype.addOverlay = function(tag, pos) {
-
+	dicomViewer.prototype.addOverlay = function(group, element, prefix, pos) {
+		var newOverlay = new overlay(group, element, prefix, pos);
+		this.overlayList.push(newOverlay);
+		
+		this.drawOverlay();
 	}
-
+	
+	dicomViewer.prototype.drawOverlay = function(){
+			
+	}
+	
 	dicomViewer.prototype.selectObject = function(obj) {
 		if(obj && obj instanceof annObject) {
 
@@ -492,16 +554,6 @@
 			this.imgLayer.scale(value);
 		}
 	}
-
-	dicomViewer.prototype.reset = function(value) {
-		this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
-		//adjust objects' size
-		this.annotationList.forEach(function(obj) {
-			if(obj._resize) {
-				obj._resize();
-			}
-		});
-	}
 	
 	dicomViewer.prototype.getScale = function(){
 		var trans = this.imgLayer.transform();
@@ -511,6 +563,38 @@
 		};
 		
 		return scale;
+	}
+	
+	dicomViewer.prototype.reset = function(value) {
+		this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
+		//adjust objects' size
+		this.annotationList.forEach(function(obj) {
+			if(obj.onScale) {
+				obj.onScale();
+			}
+		});
+	}
+	
+	dicomViewer.prototype.bestFit = function(){
+		var imgWidth = this.image.width,
+			imgHeight = this.image.height,
+			canvasWidth = this.canvas.width,
+			canvasHeight = this.canvas.height;
+		var widthScale = canvasWidth/imgWidth,
+			heightScale = canvasHeight/imgHeight;
+		
+		this.reset();
+		if(widthScale < heightScale){
+			this.imgLayer.scale(widthScale);
+		}else{
+			this.imgLayer.scale(heightScale);
+		}
+		
+		this.annotationList.forEach(function(obj) {
+			if(obj.onScale) {
+				obj.onScale();
+			}
+		});
 	}
 	
 	//serialize to json string
@@ -571,41 +655,6 @@
 
 			dv.selectObject();
 		}
-	}
-
-	/*********************************
-	 * the dicomTag definition
-	 */
-
-	function dicomTag(group, element, value) {
-		this.group = group;
-		this.element = element;
-		this.value = value;
-	}
-
-	/*********************************
-	 * the overlay definition
-	 */
-
-	var overlayConfigure = {
-		color: '#ff0000',
-		fontSize: '15px'
-	};
-
-	function overlay(tag, pos) {
-		this.tag = tag;
-		this.position = pos;
-		this.prefix = "";
-		this.show = true;
-	}
-
-	overlay.prototype.show = function(viewer) {
-		this.parent = viewer;
-		this.id = viewer._newObjectId();
-
-		//		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
-		//		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-		//		this.label = jc('#'+idLbl);
 	}
 
 	/*********************************
@@ -705,7 +754,7 @@
 	annArrow.prototype = new annObject();
 	
 	//ptEnd points to the target, will with arrow
-	annArrow.prototype._reDraw = function(ptStart, ptEnd){
+	annArrow.prototype.reDraw = function(ptStart, ptEnd){
 		this.ptStart = ptStart;
 		this.ptEnd = ptEnd;
 		var dv = this.parent;
@@ -773,8 +822,8 @@
 		this.arrowLineB._lineWidth = lineWidth;
 	}
 	
-	annArrow.prototype._resize = function(){
-		this._reDraw(this.ptStart, this.ptEnd);
+	annArrow.prototype.onScale= function(){
+		this.reDraw(this.ptStart, this.ptEnd);
 	}
 	
 	annArrow.prototype.del = function(){
@@ -858,21 +907,26 @@
 				var idLbl = this.id + "_lbl";
 				var lblPos = {
 					x: this.ptStart.x + 5,
-					y: this.ptStart.y - 5
+					y: this.ptStart.y - 30
 				};
 				jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 				this.label = jc('#' + idLbl);
 
 				this._setChildMouseEvent(this.label);
 			}
-
-			this._reDraw();
+			
+			if(!this.arrow){
+				this.arrow = new annArrow(dv);
+			}
+			
+			this.reDraw();
 		}
 	}
 
 	annRect.prototype.onMouseUp = function(arg) {
 		var dv = this.parent;
 		if(this.curStep == stepEnum.step2) {
+
 			this.isCreated = true;
 			dv._onObjectCreated(this);
 
@@ -915,6 +969,10 @@
 			this.label.del();
 			this.label = undefined;
 		}
+		if(this.arrow){
+			this.arrow.del();
+			this.arrow = undefined;
+		}
 	}
 
 	annRect.prototype.setEdit = function(edit) {
@@ -931,53 +989,24 @@
 			this.label.color(colors.white);
 			this.circleA.color(colors.white);
 		}
+		
+		this.arrow.setEdit(edit);
 	}
 
-	annRect.prototype._reDraw = function() {
+	annRect.prototype.reDraw = function() {
 		var size = 2 * (this.width + this.height);
 		size = Math.round(size * 100) / 100;
 		var msg = "size=" + size;
 
 		this.label.string(msg);
 		
-		this._resize();
-	}
-
-	annRect.prototype.setDraggable = function(draggable) {
-		var aRect = this;
-
-		this._setChildDraggable(this.rect, draggable, function(deltaX, deltaY) {
-			aRect._translateChild(aRect.circleA, deltaX, deltaY);
-			aRect._translateChild(aRect.label, deltaX, deltaY);
-			aRect.ptStart = {
-				x: aRect.rect._x,
-				y: aRect.rect._y
-			};
-		});
-
-		this._setChildDraggable(this.circleA, draggable, function(deltaX, deltaY) {
-			aRect._translateChild(aRect.rect, deltaX, deltaY);
-			aRect.rect._width -= deltaX;
-			aRect.rect._height -= deltaY;
-
-			aRect.ptStart = {
-				x: aRect.rect._x,
-				y: aRect.rect._y
-			};
-
-			aRect.width = aRect.rect._width;
-			aRect.height = aRect.rect._height;
-
-			aRect._translateChild(aRect.label, deltaX, deltaY);
-			aRect._reDraw();
-		});
-
-		this._setChildDraggable(this.label, draggable, function(deltaX, deltaY) {});
-	}
+		this.arrow.reDraw({x:this.label._x, y:this.label._y}, this.ptStart);
 	
-	annRect.prototype._resize = function(){
-		var trans = this.parent.imgLayer.transform();
-		var scale = trans[0][0];
+		this.onScale();
+	}
+
+	annRect.prototype.onScale= function(){
+		var scale = this.parent.getScale();
 
 		//change label font size
 		var fontSize = Math.round(15 / scale);
@@ -1003,6 +1032,44 @@
 		}
 		this.circleA._lineWidth = lineWidth;
 		this.rect._lineWidth = lineWidth;
+		
+		this.arrow.onScale();
+	}
+
+	annRect.prototype.setDraggable = function(draggable) {
+		var aRect = this;
+
+		this._setChildDraggable(this.rect, draggable, function(deltaX, deltaY) {
+			aRect._translateChild(aRect.circleA, deltaX, deltaY);
+			aRect._translateChild(aRect.label, deltaX, deltaY);
+			aRect.ptStart = {
+				x: aRect.rect._x,
+				y: aRect.rect._y
+			};
+			
+			aRect.reDraw();
+		});
+
+		this._setChildDraggable(this.circleA, draggable, function(deltaX, deltaY) {
+			aRect._translateChild(aRect.rect, deltaX, deltaY);
+			aRect.rect._width -= deltaX;
+			aRect.rect._height -= deltaY;
+
+			aRect.ptStart = {
+				x: aRect.rect._x,
+				y: aRect.rect._y
+			};
+
+			aRect.width = aRect.rect._width;
+			aRect.height = aRect.rect._height;
+
+			aRect._translateChild(aRect.label, deltaX, deltaY);
+			aRect.reDraw();
+		});
+
+		this._setChildDraggable(this.label, draggable, function(deltaX, deltaY) {
+			aRect.reDraw();
+		});
 	}
 	
 	annRect.prototype.serialize = function() {
@@ -1092,14 +1159,14 @@
 			var idLbl = this.id + '_lbl';
 			var lblPos = {
 				x: ptMiddle.x,
-				y: ptMiddle.y
+				y: ptMiddle.y - 30
 			};
 			jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
 			this.label = jc('#' + idLbl);
 
 			this.arrow = new annArrow(this.parent);
 
-			this._reDraw();
+			this.reDraw();
 
 			this._setChildMouseEvent(this.circleStart, 'crosshair');
 			this._setChildMouseEvent(this.circleEnd, 'crosshair');
@@ -1186,7 +1253,7 @@
 				x: cs._x,
 				y: cs._y
 			};
-			aLine._reDraw();
+			aLine.reDraw();
 		});
 
 		this._setChildDraggable(ce, draggable, function(deltaX, deltaY) {
@@ -1194,7 +1261,7 @@
 				x: ce._x,
 				y: ce._y
 			};
-			aLine._reDraw();
+			aLine.reDraw();
 		});
 
 		this._setChildDraggable(cm, draggable, function(deltaX, deltaY) {
@@ -1210,15 +1277,15 @@
 				y: ce._y
 			};
 
-			aLine._reDraw();
+			aLine.reDraw();
 		});
 
 		this._setChildDraggable(lbl, draggable, function(deltaX, deltaY) {
-			aLine._reDraw();
+			aLine.reDraw();
 		});
 	}
 
-	annLine.prototype._reDraw = function() {
+	annLine.prototype.reDraw = function() {
 		var dv = this.parent;
 		this.line.points([
 			[this.ptStart.x, this.ptStart.y],
@@ -1234,12 +1301,12 @@
 		var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) *100)/100;
 		this.label.string(msg);
 		
-		this.arrow._reDraw({x:this.label._x, y:this.label._y}, ptMiddle);
+		this.arrow.reDraw({x:this.label._x, y:this.label._y}, ptMiddle);
 		
-		this._resize();
+		this.onScale();
 	}
 	
-	annLine.prototype._resize = function(){
+	annLine.prototype.onScale= function(){
 		var dv = this.parent;
 		var scale = dv.getScale();	
 		
@@ -1272,7 +1339,7 @@
 		this.circleEnd._lineWidth = lineWidth;
 		this.line._lineWidth = lineWidth;
 		
-		this.arrow._resize();
+		this.arrow.onScale();
 	}
 	
 	annLine.prototype.serialize = function() {
@@ -1294,8 +1361,9 @@
 
 	//export definitiens
 	window.dicomViewer = dicomViewer;
-	window.dicomTag = dicomTag;
-	window.overlay = overlay;
+	//window.dicomTag = dicomTag;
+	//window.overlay = overlay;
+	window.overlayPos = overlayPos;
 	window.viewContext = viewContext;
 
 })(window, undefined);
