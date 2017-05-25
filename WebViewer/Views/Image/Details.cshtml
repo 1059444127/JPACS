@@ -9,37 +9,6 @@
 <div>
     <hr />
     <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.SOPInstanceUid)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.SOPInstanceUid)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageNumber)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ImageNumber)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageDateString)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ImageDateString)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageTimeString)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ImageTimeString)
-        </dd>
 
         <dt>
             @Html.DisplayNameFor(model => model.ImageRows)
@@ -71,17 +40,18 @@
     @Html.ActionLink("Back to List", "Index")
 </p>
 
-<table id="imageToolBar">
+<table class='toolbarGroup'>
     <tr>
-        <td>
-            <input id="btnRotate" type="button" value="Rotate" class="toolBarBtn"/>
-        </td>
-        <td>
-            <input id="btnPan" type="button" value="Pan" class="toolBarBtn" />
-        </td>
-        <td>
-            <input id="btnReset" type="button" value="Reset" class="toolBarBtn" />
-        </td>
+        <td><input id='btnSelect' type="button" value='Select'></td>
+        <td><input id='btnPan' type="button" value='Pan'></td>
+        <td><input id='btnRotate' type="button" value='Rotate'></td>
+        <td><input id='btnReset' type="button" value='True Size' style="width:75px"></td>
+        <td><input id='btnBestFit' type="button" value='Best Fit'></td>
+        <td><input id='btnAddRect' type="button" value='Rect'></td>
+        <td><input id='btnAddLine' type="button" value='Line'></td>
+        <td><input id='btnDelete' type="button" value='Delete'></td>
+        <td><input id='btnSave' type="button" value='Save'></td>
+        <td><input id='btnLoad' type="button" value='Load'></td>
     </tr>
 </table>
 
@@ -94,5 +64,6 @@
 </script>
 
 @section Scripts {
-    @Scripts.Render("~/scripts/imageView.js")
+    @Scripts.Render("~/scripts/dicomViewer.js")
+    @Scripts.Render("~/scripts/app.js")
 }

@@ -24,20 +24,36 @@
 		<script>
 			window.onload = function(){
 				var serializedString = undefined;
+				var tag = new dicomTag(1001, 2101, 'Vij Hock');
+				var tagList = [];
+				tagList.push(tag);
 				
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
+					v1.setDicomTags(tagList);
+					
 					v1.addOverlay(1001,2101,overlayPos.topLeft1, 'topLeft');
 					v1.addOverlay(1001,2101,overlayPos.topLeft2, 'topLeft2');
 					v1.addOverlay(1001,2101,overlayPos.topLeft3, 'topLeft3');
-					v1.addOverlay(1001,2101,overlayPos.topLeft4, 'topLeft4');
-					v1.addOverlay(1001,2101,overlayPos.topLeft5, 'topLeft5');
-					v1.addOverlay(1001,2101,overlayPos.topLeft6, 'topLeft6');
+					v1.addOverlay(1001,2101,overlayPos.topRight1, 'topRight1');
+					v1.addOverlay(1001,2101,overlayPos.topRight2, 'topRight2');
+					v1.addOverlay(1001,2101,overlayPos.topRight3, 'topRight3');
+					v1.addOverlay(1001,2101,overlayPos.bottomLeft1, 'bottomLeft1');
+					v1.addOverlay(1001,2101,overlayPos.bottomLeft2, 'bottomLeft2');
+					v1.addOverlay(1001,2101,overlayPos.bottomLeft3, 'bottomLeft3');
+					v1.addOverlay(1001,2101,overlayPos.bottomRight1, 'bottomRight1');
+					v1.addOverlay(1001,2101,overlayPos.bottomRight2, 'bottomRight2');
+					v1.addOverlay(1001,2101,overlayPos.bottomRight3, 'bottomRight3');
 				});
 				
 				var v2 = new dicomViewer();
 				v2.initialize('c2', 'img/img2.jpg', function(){
-					
+					v2.addOverlay(1001,2101,overlayPos.topLeft1, 'topLeft');
+					v2.addOverlay(1001,2101,overlayPos.topLeft2, 'topLeft2');
+					v2.addOverlay(1001,2101,overlayPos.topLeft3, 'topLeft3');
+					v2.addOverlay(1001,2101,overlayPos.topRight1, 'topRight1');
+					v2.addOverlay(1001,2101,overlayPos.topRight2, 'topRight2');
+					v2.addOverlay(1001,2101,overlayPos.topRight3, 'topRight3');
 				});
 				
 				var curViewer = v1;
