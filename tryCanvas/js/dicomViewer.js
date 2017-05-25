@@ -166,23 +166,24 @@
 	 */
 
 	var overlaySetting = {
-		color: '#ff0000',
-		fontSize: '15px'
+		color: colors.white,
+		font: 'Times New Roman',
+		fontSize: 20
 	};
 
-	overlayPos = {
-		topLeft1 = 1,
-		topLeft2 = 2,
-		topLeft3 = 3,
-		topRight1 = 4,
-		topRight2 = 5,
-		topRight3 = 6,
-		bottomLeft1 = 7,
-		bottomLeft2 = 8,
-		bottomLeft3 = 9,
-		bottomRight1 = 10,
-		bottomRight2 = 11,
-		bottomRight3 = 12
+	var overlayPos = {
+		topLeft1: 0,
+		topLeft2: 1,
+		topLeft3: 2,
+		topRight1: 3,
+		topRight2: 4,
+		topRight3: 5,
+		bottomLeft1: 6,
+		bottomLeft2: 7,
+		bottomLeft3: 8,
+		bottomRight1: 9,
+		bottomRight2: 10,
+		bottomRight3: 11
 	};
 	
 	function overlay(group, element, pos, prefix) {
@@ -190,18 +191,52 @@
 		this.element = element;
 		this.position = pos;
 		this.prefix = prefix;
+		this.ptStart = {x:0,y:0};
 		this.isCreated = false;
 	}
 
-	overlay.prototype.show = function(viewer) {
+	overlay.prototype.create = function(viewer) {
+		if(this.isCreated){
+			return;
+		}
+		
 		this.parent = viewer;
 		this.id = viewer._newObjectId();
-
-		//		var lblPos = {x:this.ptStart.x+5, y:this.ptStart.y-5};
-		//		jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-		//		this.label = jc('#'+idLbl);
+		
+		var fontSize = overlaySetting.fontSize;	
+		var v1 = Math.floor(this.position/3);
+		var v2 = this.position%3;
+		
+		if(v1%2 == 0){//left
+			this.ptStart.x = 5;
+		}else{
+			this.ptStart.x = viewer.canvas.width - 100;
+		}
+		
+		if(v1 < 2){//top
+			this.ptStart.y = (v2+1)*fontSize;
+		}else{
+			this.ptStart.y = viewer.canvas.height - (fontSize + (2-v2)*fontSize);
+		}
+		
+		var idLbl = this.id +"_ol";
+		var font = "{0}px {1}".format(overlaySetting.fontSize, overlaySetting.font);
+		jc.text(this.prefix, this.ptStart.x, this.ptStart.y).id(idLbl).layer(viewer.olLayerId).color(colors.white).font(font);
+		this.label = jc('#'+idLbl);
+		
+		this.isCreated = true;
 	}
 
+	overlay.prototype.updateString = function(value){
+		if(this.label){
+			if(this.prefix){
+				value = this.prefix +': '+value;
+			}
+			
+			this.label.string(value);
+		}
+	}
+	
 	/*********************************
 	 * the dicomViewer class
 	 */
@@ -218,6 +253,8 @@
 		this.curSelectObj = undefined;
 
 		this.imgLayerId = this.id + '_imgLayer';
+		this.olLayerId = this.id +'_overlayLayer';
+		
 		this.imgId = this.id + '_imgId';
 
 		this.eventHandlers = {};
@@ -245,7 +282,8 @@
 			jc.start(canvasId, true);
 
 			dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
-
+			dv.olLayer = jc.layer(dv.olLayerId).up('top');
+			
 			//register events
 			dv.imgLayer.mousedown(function(arg) {
 				dv.onMouseDown.call(dv, arg)
@@ -271,7 +309,7 @@
 			dv.isReady = true;
 
 			if(callBack) {
-				callBack();
+				callBack.call(dv);
 			}
 			
 			dv.bestFit();
@@ -279,13 +317,6 @@
 
 		dImg.src = imgSrc;
 		this.image = dImg;
-	}
-
-	dicomViewer.prototype.setDicomTags = function(tagList) {
-		this.dicomTagList = tagList;
-		
-		//tags value maybe changed, redraw overlay
-		this.drawOverlay();
 	}
 
 	dicomViewer.prototype.registerEvent = function(obj, type) {
@@ -454,16 +485,32 @@
 			this.selectObject(undefined);
 		}
 	}
-
-	dicomViewer.prototype.addOverlay = function(group, element, prefix, pos) {
-		var newOverlay = new overlay(group, element, prefix, pos);
-		this.overlayList.push(newOverlay);
+	
+	dicomViewer.prototype.setDicomTags = function(tagList) {
+		this.dicomTagList = tagList;
 		
-		this.drawOverlay();
+		//tags value maybe changed, redraw overlay
+		this.refreshOverlay();
 	}
 	
-	dicomViewer.prototype.drawOverlay = function(){
+	dicomViewer.prototype.addOverlay = function(group, element, pos, prefix) {
+		var ol = new overlay(group, element,pos, prefix);
+		this.overlayList.push(ol);
+		
+		this.refreshOverlay();
+	}
+	
+	dicomViewer.prototype.refreshOverlay = function(){		
+		var i = 0, len = this.overlayList.length;
+		for(i=0; i<len; i++){
+			var ol = this.overlayList[i];
 			
+			if(!ol.isCreated){
+				ol.create(this);
+			}
+			
+			ol.updateString("this is test");
+		}
 	}
 	
 	dicomViewer.prototype.selectObject = function(obj) {
@@ -586,8 +633,10 @@
 		this.reset();
 		if(widthScale < heightScale){
 			this.imgLayer.scale(widthScale);
+			this.imgLayer.translate(0, (canvasHeight - imgHeight*widthScale)/2);
 		}else{
 			this.imgLayer.scale(heightScale);
+			this.imgLayer.translate((canvasWidth - imgWidth*heightScale)/2, 0);
 		}
 		
 		this.annotationList.forEach(function(obj) {

@@ -8,11 +8,11 @@
 		<script type="text/javascript" src="js/dicomViewer.js" ></script>
 		<style>
 			canvas{
-				background-color: #F0F8FF;
+				background-color: #000000;
 			}
 			
 			canvas.selected{
-				background-color: #F0F8FF;
+				background-color: #000000;
 			    border: red;
     			border-style: solid;
    	 			border-width: thin;
@@ -27,7 +27,12 @@
 				
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
-					
+					v1.addOverlay(1001,2101,overlayPos.topLeft1, 'topLeft');
+					v1.addOverlay(1001,2101,overlayPos.topLeft2, 'topLeft2');
+					v1.addOverlay(1001,2101,overlayPos.topLeft3, 'topLeft3');
+					v1.addOverlay(1001,2101,overlayPos.topLeft4, 'topLeft4');
+					v1.addOverlay(1001,2101,overlayPos.topLeft5, 'topLeft5');
+					v1.addOverlay(1001,2101,overlayPos.topLeft6, 'topLeft6');
 				});
 				
 				var v2 = new dicomViewer();
