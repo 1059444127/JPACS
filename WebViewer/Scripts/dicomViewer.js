@@ -316,14 +316,14 @@
     }
 
     dicomViewer.prototype.reloadImage = function (imgUrl, callback) {
-        if (this.jcImage) {
-            this.jcImage.del();
-        }
-        this.image = undefined;
         var dv = this;
 
         var dImg = new Image()
         dImg.onload = function () {
+            if (dv.jcImage) {
+                dv.jcImage.del();
+            }
+
             var imgId = dv.id + "_img_" + dv._newObjectId();
             jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
             dv.jcImage = jc('#' + imgId);

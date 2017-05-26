@@ -5,7 +5,7 @@ window.onload = function () {
     tagList.push(tag);
 
     var v1 = new dicomViewer();
-    v1.initialize('c1', imageUrl, function () {
+    v1.initialize('c1', imgInfo.ImageUrl, function () {
         v1.setDicomTags(tagList);
 
         v1.addOverlay(1001, 2101, overlayPos.topLeft1, 'topLeft');
@@ -93,5 +93,23 @@ window.onload = function () {
         curViewer.bestFit();
     });
 
+    $('#btnWL').on('click', function () {
+        imgInfo.windowCenter -= 50;
+        imgInfo.windowWidth -= 50;
 
+        $.ajax({
+            type: "POST",
+            url: "/Image/AdjustWL",
+            data: JSON.stringify(imgInfo),
+            dataType: "json",
+            contentType: 'application/json; charset=utf-8',
+            success: function (data) {
+                //alert(data.imgSrc);
+                v1.reloadImage(data.imgSrc);
+            },
+            error: function () {
+                alert("Error occured!!")
+            }
+        });
+    });
 }

@@ -1,4 +1,4 @@
-﻿@model JPACS.Model.Image
+﻿@model WebPACS.Models.ImageViewModel
 
 @{
     ViewBag.Title = "Details";
@@ -9,29 +9,11 @@
 <div>
     <hr />
     <dl class="dl-horizontal">
-
         <dt>
-            @Html.DisplayNameFor(model => model.ImageRows)
+            @Html.DisplayNameFor(model => model.ImageUrl)
         </dt>
-
         <dd>
-            @Html.DisplayFor(model => model.ImageRows)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageColumns)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.ImageColumns)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.FilePath)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.FilePath)
+            @Html.DisplayFor(model => model.ImageUrl)
         </dd>
 
     </dl>
@@ -52,6 +34,7 @@
         <td><input id='btnDelete' type="button" value='Delete'></td>
         <td><input id='btnSave' type="button" value='Save'></td>
         <td><input id='btnLoad' type="button" value='Load'></td>
+        <td><input id='btnWL' type="button" value='W/L'></td>
     </tr>
 </table>
 
@@ -60,7 +43,12 @@
 </div>
 
 <script>
-    var imageUrl = "@(ViewBag.ImageUrl)";
+
+    var imgInfo = {};
+    imgInfo.ImageUrl = '@Model.ImageUrl';
+    imgInfo.windowCenter = @Model.WindowCenter;
+    imgInfo.windowWidth = @Model.WindowWidth;
+
 </script>
 
 @section Scripts {
