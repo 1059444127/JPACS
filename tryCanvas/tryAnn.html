@@ -117,7 +117,17 @@
 					curViewer.bestFit();
 				});
 				
-				
+				var cur1 = true;
+				$('#btnLoadImg').on('click', function(){
+					if(cur1){
+						v1.reloadImage('img/img2.jpg');
+						cur1=false;
+					}else{
+						v1.reloadImage('img/img1.jpg');
+						cur1 = true;
+					}
+					
+				});
 			}
 		</script>
 	</head>
@@ -135,6 +145,7 @@
 					<td><input id='btnDelete' type="button" value='Delete'></td>
 					<td><input id='btnSave' type="button" value='Save'></td>
 					<td><input id='btnLoad' type="button" value='Load'></td>
+					<td><input id='btnLoadImg' type="button" value='LoadImg'></td>
 				</tr>
 			</table>
 		</div>

@@ -255,8 +255,6 @@
 		this.imgLayerId = this.id + '_imgLayer';
 		this.olLayerId = this.id +'_overlayLayer';
 		
-		this.imgId = this.id + '_imgId';
-
 		this.eventHandlers = {};
 		this._objectIndex = 0;
 	}
@@ -266,7 +264,7 @@
 		return this.id + "_obj_" + this._objectIndex;
 	}
 
-	dicomViewer.prototype.initialize = function(canvasId, imgSrc, callBack) {
+	dicomViewer.prototype.initialize = function(canvasId, imgUrl, callBack) {
 		var dv = this;
 
 		dv.canvas = document.getElementById(canvasId);
@@ -298,13 +296,11 @@
 				dv.onClick.call(dv, arg)
 			});
 
-			var idOverlay = dv._newObjectId();
-			jc.text('', 5, 15).id(idOverlay).color(colors.red).font('15px Times New Roman');
-			dv.overlay1 = jc('#' + idOverlay);
-
 			//show image
-			jc.image(dv.image).id(dv.imgId).layer(dv.imgLayerId);
-
+			var imgId = dv.id + "_img_"+ dv._newObjectId();
+			jc.image(dv.image).id(imgId).layer(dv.imgLayerId);
+			dv.jcImage = jc('#'+imgId);
+			
 			dv.draggable(true);
 			dv.isReady = true;
 
@@ -315,10 +311,28 @@
 			dv.bestFit();
 		}
 
-		dImg.src = imgSrc;
+		dImg.src = imgUrl;
 		this.image = dImg;
 	}
 
+	dicomViewer.prototype.reloadImage = function(imgUrl, callback){
+		if(this.jcImage){
+			this.jcImage.del();
+		}
+		this.image = undefined;
+		var	dv = this;
+		
+		var dImg = new Image()
+		dImg.onload = function() {
+			var imgId = dv.id + "_img_"+ dv._newObjectId();
+			jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
+			dv.jcImage = jc('#'+imgId);
+		}
+		
+		dImg.src = imgUrl;
+		this.image = dImg;
+	}
+	
 	dicomViewer.prototype.registerEvent = function(obj, type) {
 		if(!this.eventHandlers[type]) {
 			this.eventHandlers[type] = [];
