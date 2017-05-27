@@ -129,28 +129,6 @@
         return "viewer_" + globalViewerId;
     }
 
-    String.prototype.format = function (args) {
-        var result = this;
-        if (arguments.length > 0) {
-            if (arguments.length == 1 && typeof (args) == "object") {
-                for (var key in args) {
-                    if (args[key] != undefined) {
-                        var reg = new RegExp("({" + key + "})", "g");
-                        result = result.replace(reg, args[key]);
-                    }
-                }
-            } else {
-                for (var i = 0; i < arguments.length; i++) {
-                    if (arguments[i] != undefined) {
-                        var reg = new RegExp("({)" + i + "(})", "g");
-                        result = result.replace(reg, arguments[i]);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
     /*********************************
 	 * the dicomTag definition
 	 */
@@ -160,6 +138,9 @@
         this.element = element;
         this.value = value;
     }
+
+    dicomTag.patientName = { group: 0x10, element: 0x10 };
+    dicomTag.patientBirthDate = { group: 0x10, element: 0x30 };
 
     /*********************************
 	 * the overlay definition
@@ -528,7 +509,7 @@
             var j = 0, len2 = this.dicomTagList.length;
             for (j = 0; j < len2; j++) {
                 var tag = this.dicomTagList[j];
-                if (tag.group = ol.group && tag.element == ol.element) {
+                if (tag.group == ol.group && tag.element == ol.element) {
                     theTag = tag;
                     break;
                 }

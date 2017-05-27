@@ -8,6 +8,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using WebPACS.Models;
+using System.Web.Script.Serialization;
 
 namespace WebPACS.Controllers
 {
@@ -66,41 +67,79 @@ namespace WebPACS.Controllers
             img.ImageUrl = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
             img.WindowCenter = dcmImage.WindowCenter;
             img.WindowWidth = dcmImage.WindowWidth;
+            
 
+            List<DicomTagModel> tags = new List<DicomTagModel>();
+
+            string name = dcmImage.Dataset.Get<string>(DicomTag.PatientName);
+            string birth = dcmImage.Dataset.Get<string>(DicomTag.PatientBirthDate);
+
+            tags.Add(new DicomTagModel()
+            {
+                group = DicomTag.PatientName.Group,
+                element = DicomTag.PatientName.Element,
+                value = name
+            });
+
+            tags.Add(new DicomTagModel()
+            {
+                group = DicomTag.PatientBirthDate.Group,
+                element = DicomTag.PatientBirthDate.Element,
+                value = birth
+            });
+
+            var jsonSerialiser = new JavaScriptSerializer();
+            string json = jsonSerialiser.Serialize(tags);
+            img.DicomTags = json;
             //ViewBag.ImageInfo = Json(img).ToString();// = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
 
             return View(img);
         }
 
         [HttpPost]
-        public ActionResult AdjustWL(ImageViewModel obj)
+        public ActionResult AdjustWL(ImageViewModel model)
         {
-            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-            Image image = images.First<Image>();
-
-            DicomImage dcmImage;
-            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-            if (dcmImage == null)
+            try
             {
-                dcmImage = new DicomImage(image.FilePath);
-                SetCache(image.SOPInstanceUid, dcmImage);
+                List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
+                Image image = images.First<Image>();
+
+                DicomImage dcmImage;
+                dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
+                if (dcmImage == null)
+                {
+                    dcmImage = new DicomImage(image.FilePath);
+                    SetCache(image.SOPInstanceUid, dcmImage);
+                }
+
+                double originCenter = dcmImage.WindowCenter;
+                double originWidth = dcmImage.WindowWidth;
+
+                string imageUrl = string.Format("~/Images/{0}_{1}_{2}.jpg", image.SOPInstanceUid, model.WindowCenter, model.WindowWidth);
+                string physicalPath = Server.MapPath(imageUrl);
+
+                if (!System.IO.File.Exists(physicalPath))
+                {
+                    dcmImage.WindowCenter = model.WindowCenter;
+                    dcmImage.WindowWidth = model.WindowWidth;
+                    dcmImage.RenderImage().AsBitmap().Save(physicalPath);
+                }
+
+                dcmImage.WindowCenter = originCenter;
+                dcmImage.WindowWidth = originWidth;
+
+                return Json(new
+                {
+                    imgSrc = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext)
+                });
             }
-
-            dcmImage.WindowCenter = obj.WindowCenter;
-            dcmImage.WindowWidth = obj.WindowWidth;
-
-            string imageUrl = string.Format("~/Images/{0}_{1}_{2}.jpg", image.SOPInstanceUid, dcmImage.WindowCenter, dcmImage.WindowWidth);
-            string physicalPath = Server.MapPath(imageUrl);
-
-            if (!System.IO.File.Exists(physicalPath))
+            catch (Exception e)
             {
-                dcmImage.RenderImage().AsBitmap().Save(physicalPath);
+                return Json(new
+                {
+                    imgSrc = "failed due to " + e.Message
+                });
             }
-
-            return Json(new
-            {
-                imgSrc = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext)
-            });
         }
     }
 }

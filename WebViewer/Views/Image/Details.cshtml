@@ -42,16 +42,16 @@
     <canvas id="c1" width="1100" height="600"></canvas>
 </div>
 
-<script>
-
-    var imgInfo = {};
-    imgInfo.ImageUrl = '@Model.ImageUrl';
-    imgInfo.windowCenter = @Model.WindowCenter;
-    imgInfo.windowWidth = @Model.WindowWidth;
-
-</script>
-
 @section Scripts {
     @Scripts.Render("~/scripts/dicomViewer.js")
     @Scripts.Render("~/scripts/app.js")
 }
+
+<script>
+    var imgInfo = {};
+    imgInfo.ImageUrl = '@Model.ImageUrl';
+    imgInfo.windowCenter = @Model.WindowCenter;
+    imgInfo.windowWidth = @Model.WindowWidth;
+    imgInfo.dicomTags = JSON.parse('@Html.Raw(@Model.DicomTags)');
+
+</script>

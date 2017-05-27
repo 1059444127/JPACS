@@ -1,15 +1,17 @@
+
 window.onload = function () {
     var serializedString = undefined;
-    var tag = new dicomTag(1001, 2101, 'Jack Hock');
-    var tagList = [];
-    tagList.push(tag);
+
+    //var tag = new dicomTag(1001, 2101, 'Jack Hock');
+    var tagList = imgInfo.dicomTags;
+    //tagList.push(tag);
 
     var v1 = new dicomViewer();
     v1.initialize('c1', imgInfo.ImageUrl, function () {
         v1.setDicomTags(tagList);
 
-        v1.addOverlay(1001, 2101, overlayPos.topLeft1, 'topLeft');
-        v1.addOverlay(1001, 2101, overlayPos.topLeft2, 'topLeft2');
+        v1.addOverlay(0x10, 0x10, overlayPos.topLeft1);
+        v1.addOverlay(0x10, 0x30, overlayPos.topLeft2, 'birth:');
         v1.addOverlay(1001, 2101, overlayPos.topLeft3, 'topLeft3');
         v1.addOverlay(1001, 2101, overlayPos.topRight1, 'topRight1');
         v1.addOverlay(1001, 2101, overlayPos.topRight2, 'topRight2');
@@ -96,19 +98,30 @@ window.onload = function () {
     $('#btnWL').on('click', function () {
         imgInfo.windowCenter -= 50;
         imgInfo.windowWidth -= 50;
+        
+        var baseUrl = window.location.origin;
+        if (!window.location.pathname.startsWith('/Image')) {
+            baseUrl += '/' + location.pathname.split('/')[1];
+        }
+        var adjustWLUrl = baseUrl + "/Image/AdjustWL";
+        //alert(adjustWLUrl);
+
+        var value = {};
+        value.windowCenter = imgInfo.windowCenter;
+        value.windowWidth = imgInfo.windowWidth;
 
         $.ajax({
             type: "POST",
-            url: "/Image/AdjustWL",
-            data: JSON.stringify(imgInfo),
+            url: adjustWLUrl,
+            data: JSON.stringify(value),
             dataType: "json",
             contentType: 'application/json; charset=utf-8',
             success: function (data) {
                 //alert(data.imgSrc);
                 v1.reloadImage(data.imgSrc);
             },
-            error: function () {
-                alert("Error occured!!")
+            error: function (data) {
+                alert("Error occured!!" + data.imgSrc);
             }
         });
     });
