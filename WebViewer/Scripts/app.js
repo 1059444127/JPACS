@@ -10,44 +10,24 @@ window.onload = function () {
     v1.initialize('c1', imgInfo.ImageUrl, function () {
         v1.setDicomTags(tagList);
 
-        v1.addOverlay(0x10, 0x10, overlayPos.topLeft1);
-        v1.addOverlay(0x10, 0x30, overlayPos.topLeft2, 'birth:');
-        v1.addOverlay(1001, 2101, overlayPos.topLeft3, 'topLeft3');
-        v1.addOverlay(1001, 2101, overlayPos.topRight1, 'topRight1');
-        v1.addOverlay(1001, 2101, overlayPos.topRight2, 'topRight2');
-        v1.addOverlay(1001, 2101, overlayPos.topRight3, 'topRight3');
-        v1.addOverlay(1001, 2101, overlayPos.bottomLeft1, 'bottomLeft1');
-        v1.addOverlay(1001, 2101, overlayPos.bottomLeft2, 'bottomLeft2');
-        v1.addOverlay(1001, 2101, overlayPos.bottomLeft3, 'bottomLeft3');
-        v1.addOverlay(1001, 2101, overlayPos.bottomRight1, 'bottomRight1');
-        v1.addOverlay(1001, 2101, overlayPos.bottomRight2, 'bottomRight2');
-        v1.addOverlay(1001, 2101, overlayPos.bottomRight3, 'bottomRight3');
+        v1.addOverlay(dicomTag.patientName, overlayPos.topLeft1);
+        v1.addOverlay(dicomTag.patientBirthDate, overlayPos.topLeft2, 'Birth');
+        v1.addOverlay(dicomTag.patientSex, overlayPos.topLeft3, 'Sex');
+        v1.addOverlay(dicomTag.patientID, overlayPos.topLeft4, 'ID');
+        v1.addOverlay(dicomTag.studyDate, overlayPos.topRight1, 'Date');
+        v1.addOverlay(dicomTag.studyTime, overlayPos.topRight2, 'Time');
+        v1.addOverlay(dicomTag.bodyPart, overlayPos.bottomLeft1);
+        v1.addOverlay(dicomTag.viewPosition, overlayPos.bottomLeft2);
+        v1.addOverlay(dicomTag.windowWidth, overlayPos.bottomLeft3, "W");
+        v1.addOverlay(dicomTag.windowCenter, overlayPos.bottomLeft4, "L");
+        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight1, "Scale");
     });
-
-    //var v2 = new dicomViewer();
-    //v2.initialize('c2', 'img/img2.jpg', function () {
-    //    v2.addOverlay(1001, 2101, overlayPos.topLeft1, 'topLeft');
-    //    v2.addOverlay(1001, 2101, overlayPos.topLeft2, 'topLeft2');
-    //    v2.addOverlay(1001, 2101, overlayPos.topLeft3, 'topLeft3');
-    //    v2.addOverlay(1001, 2101, overlayPos.topRight1, 'topRight1');
-    //    v2.addOverlay(1001, 2101, overlayPos.topRight2, 'topRight2');
-    //    v2.addOverlay(1001, 2101, overlayPos.topRight3, 'topRight3');
-    //});
 
     var curViewer = v1;
     $('#c1').on('click', function () {
         $('#c1').addClass('selected');
-       // $('#c2').removeClass('selected');
-
         curViewer = v1;
     });
-
-    //$('#c2').on('click', function () {
-    //    $('#c2').addClass('selected');
-    //    $('#c1').removeClass('selected');
-
-    //    curViewer = v2;
-    //})
 
     $('#btnAddLine').on('click', function () {
         var aLine = curViewer.createLine();
@@ -58,11 +38,11 @@ window.onload = function () {
     });
 
     $('#btnSelect').on('click', function () {
-        curViewer.setContext(viewContext.select);
+        curViewer.setSelectModel();
     });
 
     $('#btnPan').on('click', function () {
-        curViewer.setContext(viewContext.pan);
+        curViewer.setPanModel();
     });
 
     $('#btnRotate').on('click', function () {
@@ -95,10 +75,7 @@ window.onload = function () {
         curViewer.bestFit();
     });
 
-    $('#btnWL').on('click', function () {
-        imgInfo.windowCenter -= 50;
-        imgInfo.windowWidth -= 50;
-        
+    function adjustWL(width, center) {
         var baseUrl = window.location.origin;
         if (!window.location.pathname.startsWith('/Image')) {
             baseUrl += '/' + location.pathname.split('/')[1];
@@ -107,8 +84,8 @@ window.onload = function () {
         //alert(adjustWLUrl);
 
         var value = {};
-        value.windowCenter = imgInfo.windowCenter;
-        value.windowWidth = imgInfo.windowWidth;
+        value.windowCenter = center;
+        value.windowWidth = width;
 
         $.ajax({
             type: "POST",
@@ -118,11 +95,46 @@ window.onload = function () {
             contentType: 'application/json; charset=utf-8',
             success: function (data) {
                 //alert(data.imgSrc);
-                v1.reloadImage(data.imgSrc);
+                v1.reloadImage(data.imgSrc, function () {
+                    imgInfo.windowCenter = value.windowCenter;
+                    imgInfo.windowWidth = value.windowWidth;
+
+                    v1.updateTag(dicomTag.windowCenter, imgInfo.windowCenter);
+                    v1.updateTag(dicomTag.windowWidth, imgInfo.windowWidth);
+                });
             },
             error: function (data) {
                 alert("Error occured!!" + data.imgSrc);
             }
         });
+    }
+
+    $('#btnWA').on('click', function () {
+        var center = imgInfo.windowCenter,
+            width = imgInfo.windowWidth;
+
+        width += 50;
+        adjustWL(width, center);
+    });
+    $('#btnWM').on('click', function () {
+        var center = imgInfo.windowCenter,
+            width = imgInfo.windowWidth;
+
+        width -= 50;
+        adjustWL(width, center);
+    });
+    $('#btnLM').on('click', function () {
+        var center = imgInfo.windowCenter,
+            width = imgInfo.windowWidth;
+
+        center -= 50;
+        adjustWL(width, center);
+    });
+    $('#btnLA').on('click', function () {
+        var center = imgInfo.windowCenter,
+            width = imgInfo.windowWidth;
+
+        center += 50;
+        adjustWL(width, center);
     });
 }

@@ -37,6 +37,26 @@ namespace WebPACS.Controllers
             return View(images);
         }
 
+        private void AddOverlayTags(List<DicomTagModel> tags, DicomDataset ds)
+        {
+            List<DicomTag> tagsToAdd = new List<DicomTag>
+            {
+                DicomTag.PatientName, DicomTag.PatientID, DicomTag.PatientSex, DicomTag.PatientBirthDate, DicomTag.WindowWidth, DicomTag.WindowCenter, DicomTag.StudyTime,
+                DicomTag.StudyDate, DicomTag.ViewPosition, DicomTag.BodyPartExamined
+            };
+
+            foreach (DicomTag t in tagsToAdd)
+            {
+
+                tags.Add(new DicomTagModel()
+                {
+                    group = t.Group,
+                    element = t.Element,
+                    value = ds.Contains(t) ? ds.Get<string>(t) : ""
+                });
+            }
+        }
+
         public ActionResult Details(int id)
         {
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
@@ -68,29 +88,13 @@ namespace WebPACS.Controllers
             img.WindowCenter = dcmImage.WindowCenter;
             img.WindowWidth = dcmImage.WindowWidth;
             
-
             List<DicomTagModel> tags = new List<DicomTagModel>();
-
-            string name = dcmImage.Dataset.Get<string>(DicomTag.PatientName);
-            string birth = dcmImage.Dataset.Get<string>(DicomTag.PatientBirthDate);
-
-            tags.Add(new DicomTagModel()
-            {
-                group = DicomTag.PatientName.Group,
-                element = DicomTag.PatientName.Element,
-                value = name
-            });
-
-            tags.Add(new DicomTagModel()
-            {
-                group = DicomTag.PatientBirthDate.Group,
-                element = DicomTag.PatientBirthDate.Element,
-                value = birth
-            });
+            AddOverlayTags(tags, dcmImage.Dataset);
 
             var jsonSerialiser = new JavaScriptSerializer();
             string json = jsonSerialiser.Serialize(tags);
             img.DicomTags = json;
+
             //ViewBag.ImageInfo = Json(img).ToString();// = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
 
             return View(img);
