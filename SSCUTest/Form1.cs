@@ -30,7 +30,7 @@ namespace SSCUTest
                 //}
 
                 //client.AddRequest(new DicomCStoreRequest(@"test1.dcm"));
-                client.AddRequest(new DicomCStoreRequest(@"test2.dcm"));
+                client.AddRequest(new DicomCStoreRequest(@"test1.dcm"));
                 client.Send("127.0.0.1", 11123, false, "SCUTEST", "JPACSStoreSCP");
             }
             catch(Exception exp)

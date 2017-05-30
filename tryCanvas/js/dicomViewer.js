@@ -27,6 +27,80 @@
         yellow: '#ffff00'
     };
 
+    if (!String.prototype.startsWith) {
+        String.prototype.startsWith = function (searchString, position) {
+            position = position || 0;
+            return this.indexOf(searchString, position) === position;
+        };
+    }
+
+    if (!String.prototype.format) {
+        String.prototype.format = function (args) {
+            var result = this;
+            if (arguments.length > 0) {
+                if (arguments.length == 1 && typeof (args) == "object") {
+                    for (var key in args) {
+                        if (args[key] != undefined) {
+                            var reg = new RegExp("({" + key + "})", "g");
+                            result = result.replace(reg, args[key]);
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < arguments.length; i++) {
+                        if (arguments[i] != undefined) {
+                            var reg = new RegExp("({)" + i + "(})", "g");
+                            result = result.replace(reg, arguments[i]);
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    var overlayPos = {
+        topLeft1: 0,
+        topLeft2: 1,
+        topLeft3: 2,
+        topLeft4: 3,
+        topRight1: 4,
+        topRight2: 5,
+        topRight3: 6,
+        topRight4: 7,
+        bottomLeft1: 8,
+        bottomLeft2: 9,
+        bottomLeft3: 10,
+        bottomLeft4: 11,
+        bottomRight1: 12,
+        bottomRight2: 13,
+        bottomRight3: 14,
+        bottomRight4: 15
+    };
+
+    function dicomTag(arg1, arg2, arg3) {
+    	if(!arg1.group){
+		   	this.group = arg1;
+    		this.element = arg2;
+        	this.value = arg3;
+    	}else{
+        	this.group = arg1.group;
+    		this.element = arg1.element;
+    		this.value = arg2;
+    	}
+    }
+
+    dicomTag.studyTime =        { group: 0x0008, element: 0x0030 };
+    dicomTag.studyDate =        { group: 0x0008, element: 0x0020 };
+    dicomTag.patientName =      { group: 0x0010, element: 0x0010 };
+    dicomTag.patientBirthDate = { group: 0x0010, element: 0x0030 };
+    dicomTag.patientID =        { group: 0x0010, element: 0x0020 };
+    dicomTag.patientSex =       { group: 0x0010, element: 0x0040 };
+    dicomTag.viewPosition =     { group: 0x0018, element: 0x5101 };
+    dicomTag.bodyPart =         { group: 0x0018, element: 0x0015 };
+    dicomTag.windowWidth =      { group: 0x0028, element: 0x1051 };
+    dicomTag.windowCenter =     { group: 0x0028, element: 0x1050 };
+    dicomTag.customScale =      { group: 0x1111, element: 0x0001 };
+
     //define event type
     var eventType = {
         click: 1,
@@ -129,38 +203,6 @@
         return "viewer_" + globalViewerId;
     }
 
-    String.prototype.format = function (args) {
-        var result = this;
-        if (arguments.length > 0) {
-            if (arguments.length == 1 && typeof (args) == "object") {
-                for (var key in args) {
-                    if (args[key] != undefined) {
-                        var reg = new RegExp("({" + key + "})", "g");
-                        result = result.replace(reg, args[key]);
-                    }
-                }
-            } else {
-                for (var i = 0; i < arguments.length; i++) {
-                    if (arguments[i] != undefined) {
-                        var reg = new RegExp("({)" + i + "(})", "g");
-                        result = result.replace(reg, arguments[i]);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    /*********************************
-	 * the dicomTag definition
-	 */
-
-    function dicomTag(group, element, value) {
-        this.group = group;
-        this.element = element;
-        this.value = value;
-    }
-
     /*********************************
 	 * the overlay definition
 	 */
@@ -171,28 +213,14 @@
         fontSize: 17
     };
 
-    var overlayPos = {
-        topLeft1: 0,
-        topLeft2: 1,
-        topLeft3: 2,
-        topRight1: 3,
-        topRight2: 4,
-        topRight3: 5,
-        bottomLeft1: 6,
-        bottomLeft2: 7,
-        bottomLeft3: 8,
-        bottomRight1: 9,
-        bottomRight2: 10,
-        bottomRight3: 11
-    };
-
-    function overlay(group, element, pos, prefix) {
-        this.group = group;
-        this.element = element;
+    function overlay(tag, pos, prefix) {
+        this.group = tag.group;
+        this.element = tag.element;
         this.position = pos;
         this.prefix = prefix;
         this.ptStart = { x: 0, y: 0 };
         this.isCreated = false;
+        this.type = annType.overlay;
     }
 
     overlay.prototype.create = function (viewer) {
@@ -204,8 +232,8 @@
         this.id = viewer._newObjectId();
 
         var fontSize = overlaySetting.fontSize;
-        var v1 = Math.floor(this.position / 3);
-        var v2 = this.position % 3;
+        var v1 = Math.floor(this.position / 4);//0,1,2,3
+        var v2 = this.position % 4;//0,1,2,3
 
         if (v1 % 2 == 0) {//left
             this.ptStart.x = 5;
@@ -216,7 +244,7 @@
         if (v1 < 2) {//top
             this.ptStart.y = (v2 + 1) * fontSize;
         } else {
-            this.ptStart.y = viewer.canvas.height - (fontSize + (2 - v2) * fontSize);
+            this.ptStart.y = viewer.canvas.height - (fontSize + (3 - v2) * fontSize);
         }
 
         var idLbl = this.id + "_ol";
@@ -236,6 +264,7 @@
             this.label.string(value);
         }
     }
+
 
     /*********************************
 	 * the dicomViewer class
@@ -327,6 +356,10 @@
             var imgId = dv.id + "_img_" + dv._newObjectId();
             jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
             dv.jcImage = jc('#' + imgId);
+
+            if (callback) {
+                callback.call(dv);
+            }
         }
 
         dImg.src = imgUrl;
@@ -394,10 +427,17 @@
     }
 
     dicomViewer.prototype.onClick = function (evt) {
+    	if(!this.isReady){
+    		return;
+    	}
         this._handleEvent(evt, eventType.click, 'onClick');
     }
 
     dicomViewer.prototype.onMouseDown = function (evt) {
+    	if(!this.isReady){
+    		return;
+    	}
+    	
         //if in select context, and not click any object, will unselect all objects.
         if (this.curContext == viewContext.select) {
             if (!evt.event.cancelBubble) {
@@ -423,14 +463,23 @@
     }
 
     dicomViewer.prototype.onMouseMove = function (evt) {
+    	if(!this.isReady){
+    		return;
+    	}
         this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
     }
 
     dicomViewer.prototype.onMouseUp = function (evt) {
+    	if(!this.isReady){
+    		return;
+    	}
         this._handleEvent(evt, eventType.mouseUp, 'onMouseUp');
     }
 
     dicomViewer.prototype.onMouseWheel = function (evt) {
+        if(!this.isReady){
+    		return;
+    	}
         var scaleValue = 1;
         if (evt.wheelDelta / 120 > 0) {
             //up
@@ -444,6 +493,7 @@
         var ptNow = this.imgLayer.getCenter();
 
         this.imgLayer.translate(ptPrevious.x - ptNow.x, ptPrevious.y - ptNow.y);
+        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
 
         //adjust objects' size
         this.annotationList.forEach(function (obj) {
@@ -460,7 +510,9 @@
     }
 
     dicomViewer.prototype.onContextMenu = function (evt) {
-
+		if(!this.isReady){
+    		return;
+    	}
         if (this.curContext == viewContext.create) {
             this.setContext(viewContext.select);
         }
@@ -488,6 +540,14 @@
         });
     }
 
+    dicomViewer.prototype.setPanModel = function () {
+        this.setContext(viewContext.pan);
+    }
+
+    dicomViewer.prototype.setSelectModel = function () {
+        this.setContext(viewContext.select);
+    }
+
     dicomViewer.prototype.setContext = function (ctx) {
         var lastContext = this.curContext;
 
@@ -507,8 +567,26 @@
         this.refreshOverlay();
     }
 
-    dicomViewer.prototype.addOverlay = function (group, element, pos, prefix) {
-        var ol = new overlay(group, element, pos, prefix);
+    dicomViewer.prototype.updateTag = function (tag, value) {
+        var i = 0, len = this.dicomTagList.length, found = false;
+        for (i = 0; i < len; i++) {
+            var tagE = this.dicomTagList[i];
+            if (tagE.group == tag.group && tagE.element == tag.element) {
+                tagE.value = value;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            this.dicomTagList.push(new dicomTag(tag.group, tag.element, value));
+        }
+
+        this.refreshOverlay();
+    }
+
+    dicomViewer.prototype.addOverlay = function (tag, pos, prefix) {
+        var ol = new overlay(tag, pos, prefix);
         this.overlayList.push(ol);
 
         this.refreshOverlay();
@@ -528,13 +606,13 @@
             var j = 0, len2 = this.dicomTagList.length;
             for (j = 0; j < len2; j++) {
                 var tag = this.dicomTagList[j];
-                if (tag.group = ol.group && tag.element == ol.element) {
+                if (tag.group == ol.group && tag.element == ol.element) {
                     theTag = tag;
                     break;
                 }
             }
 
-            var value = 'tag';
+            var value = '';
             if (theTag) {
                 value = theTag.value;
             }
@@ -629,6 +707,7 @@
     dicomViewer.prototype.scale = function (value) {
         if (value > 0) {
             this.imgLayer.scale(value);
+            this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
         }
     }
 
@@ -644,6 +723,8 @@
 
     dicomViewer.prototype.reset = function (value) {
         this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
+        this.updateTag(dicomTag.customScale, Math.round(this.getScale()*100)/100);
+
         //adjust objects' size
         this.annotationList.forEach(function (obj) {
             if (obj.onScale) {
@@ -669,6 +750,7 @@
             this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
         }
 
+        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
         this.annotationList.forEach(function (obj) {
             if (obj.onScale) {
                 obj.onScale();
@@ -678,7 +760,7 @@
 
     //serialize to json string
     dicomViewer.prototype.serialize = function () {
-        var str = "{version:{0},annObjects:{1},overlay:{2}}";
+        var str = "{version:{0},annObjects:{1}}";
 
         var strAnnObjs = "[";
         if (this.annotationList) {
@@ -693,20 +775,7 @@
         }
         strAnnObjs += "]";
 
-        var strOverlay = "[";
-        if (this.overlayList) {
-            var i = 0,
-				len = this.overlayList.length;
-            for (i = 0; i < len; i++) {
-                strOverlay += this.overlayList[i].serialize();
-                if (i < len - 1) {
-                    strOverlay += ",";
-                }
-            }
-        }
-        strOverlay += "]"
-
-        str = str.format(this.version, strAnnObjs, strOverlay);
+        str = str.format(this.version, strAnnObjs);
         return str;
     }
 
@@ -721,10 +790,10 @@
             annObjs.forEach(function (obj) {
                 var type = obj.type;
                 switch (type) {
-                    case 'rect':
+                    case annType.rect:
                         new annRect(dv).deSerialize(obj);
                         break;
-                    case 'line':
+                    case annType.line:
                         new annLine(dv).deSerialize(obj);
                         break;
                     default:
@@ -732,20 +801,27 @@
                 }
             });
 
-            dv.selectObject();
+            dv.selectObject();//select no-object
         }
     }
 
     /*********************************
 	 * the annObject class
 	 */
+    annType = {
+        unknown: 0,
+        overlay: 1,
+        line: 2,
+        rect: 3
+    }
 
     function annObject() {
         this.parent = undefined;
+        this.type = annType.unknown;
         this.isInEdit = false;
         this.isCreated = false;
     }
-
+    
     //set child jcObject's common mouse event hander, etc.
     annObject.prototype._setChildMouseEvent = function (jcObj, overStyle) {
         var dv = this.parent;
@@ -940,6 +1016,7 @@
 
     function annRect(viewer) {
         annObject.call(this);
+        this.type = annType.rect;
         this.parent = viewer;
         this.id = viewer._newObjectId();
     }
@@ -1152,8 +1229,8 @@
     }
 
     annRect.prototype.serialize = function () {
-        var result = "{type:'rect',ptStart:{x:{0},y:{1}},width:{2},height:{3}}";
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height));
+        var result = "{type:{4},ptStart:{x:{0},y:{1}},width:{2},height:{3}}";
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height), this.type);
 
         return result;
     }
@@ -1180,6 +1257,7 @@
 
     function annLine(viewer) {
         annObject.call(this);
+        this.type = annType.line;
         this.parent = viewer;
         this.id = viewer._newObjectId();
     }
@@ -1427,8 +1505,8 @@
     }
 
     annLine.prototype.serialize = function () {
-        var result = "{type: 'line',ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}";
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y));
+        var result = "{type: {4},ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}";
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y), this.type);
 
         return result;
     }
@@ -1448,6 +1526,6 @@
     window.dicomTag = dicomTag;
     //window.overlay = overlay;
     window.overlayPos = overlayPos;
-    window.viewContext = viewContext;
+    //window.viewContext = viewContext;
 
 })(window, undefined);

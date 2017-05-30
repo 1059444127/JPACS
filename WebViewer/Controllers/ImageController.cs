@@ -52,7 +52,7 @@ namespace WebPACS.Controllers
                 {
                     group = t.Group,
                     element = t.Element,
-                    value = ds.Contains(t) ? ds.Get<string>(t) : ""
+                    value = ds.Contains(t) ? ds.Get<string>(t, "") : ""
                 });
             }
         }
@@ -75,6 +75,9 @@ namespace WebPACS.Controllers
                 SetCache(image.SOPInstanceUid, dcmImage);
             }
 
+            var bytes = dcmImage.PixelData.GetFrame(0);
+
+
             if(!System.IO.File.Exists(physicalPath))
             {
                 if (!Directory.Exists(Directory.GetParent(physicalPath).FullName))
@@ -87,7 +90,9 @@ namespace WebPACS.Controllers
             img.ImageUrl = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
             img.WindowCenter = dcmImage.WindowCenter;
             img.WindowWidth = dcmImage.WindowWidth;
-            
+            img.ImageWidth = dcmImage.Width;
+            img.ImageHeight = dcmImage.Height;
+
             List<DicomTagModel> tags = new List<DicomTagModel>();
             AddOverlayTags(tags, dcmImage.Dataset);
 
@@ -98,6 +103,25 @@ namespace WebPACS.Controllers
             //ViewBag.ImageInfo = Json(img).ToString();// = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
 
             return View(img);
+        }
+
+        [HttpGet]
+        public FileContentResult GetPixelData(int id)
+        {
+            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
+            Image image = images.First<Image>(i => i.Id == id);
+
+            DicomImage dcmImage;
+            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
+            if (dcmImage == null)
+            {
+                dcmImage = new DicomImage(image.FilePath);
+                SetCache(image.SOPInstanceUid, dcmImage);
+            }
+
+            var bytes = dcmImage.PixelData.GetFrame(0);
+
+            return File(bytes.Data, "image");
         }
 
         [HttpPost]

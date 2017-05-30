@@ -190,6 +190,7 @@
         }
     }
 
+
     var globalViewerId = 1;
 
     function newViewerId() {
@@ -264,7 +265,7 @@
 	 * the dicomViewer class
 	 */
 
-    function dicomViewer() {
+    function dicomViewer(canvasId) {
         this.version = 1; //for serialize
         this.id = newViewerId();
         this.annotationList = [];
@@ -277,14 +278,182 @@
 
         this.imgLayerId = this.id + '_imgLayer';
         this.olLayerId = this.id + '_overlayLayer';
+        this.imgId = this.id + '_img';
 
         this.eventHandlers = {};
         this._objectIndex = 0;
+
+        this.canvasId = canvasId;
+        var dv = this;
+        this.canvas = document.getElementById(canvasId);
+        this.canvas.oncontextmenu = function (evt) {
+            dv.onContextMenu.call(dv, evt);
+        };
+        this.canvas.onmousewheel = function (evt) {
+            dv.onMouseWheel.call(dv, evt);
+        };
+
+        jc.start(dv.canvasId, true);
+
+        dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
+        dv.olLayer = jc.layer(dv.olLayerId).up('top');
+
+        //register events
+        dv.imgLayer.mousedown(function (arg) {
+            dv.onMouseDown.call(dv, arg)
+        });
+        dv.imgLayer.mousemove(function (arg) {
+            dv.onMouseMove.call(dv, arg)
+        });
+        dv.imgLayer.mouseup(function (arg) {
+            dv.onMouseUp.call(dv, arg)
+        });
+        dv.imgLayer.click(function (arg) {
+            dv.onClick.call(dv, arg)
+        });
     }
 
     dicomViewer.prototype._newObjectId = function () {
         this._objectIndex++;
         return this.id + "_obj_" + this._objectIndex;
+    }
+
+    function pixelDataToGrayData(pixelData, grayData, windowWidth, windowCenter, width, height) {
+        var max = (2 * windowCenter + windowWidth) / 2.0 + 0.5;
+        var min = (2 * windowCenter - windowWidth) / 2.0 + 0.5;
+        var dFactor = 255.0 / (max - min);
+        dFactor = Math.round(dFactor * 100) / 100;
+
+        var pixelVal, disp_pixel_val, nPixelVal, index;
+
+        for (var i = 0; i < height; i++) {
+            for (var j = 0; j < width; j++) {
+                index = i * pixelData.width + j;
+                pixelVal = pixelData[index];
+
+                if (pixelVal < min) {
+                    disp_pixel_val = 0;
+                    
+                }else if (pixelVal > max) {
+                    disp_pixel_val = 255; 
+                } else {
+                    nPixelVal = (pixelVal - min) * dFactor;
+
+                    if (nPixelVal < 0) disp_pixel_val = 0;
+                    else if (nPixelVal > 255) disp_pixel_val = 255;
+                    else disp_pixel_val = nPixelVal;
+                }
+
+                disp_pixel_val = Math.round(disp_pixel_val);
+
+                var k = 4 * index;
+                for (var x = k; x < k + 3; x++) {
+                    grayData[x] = disp_pixel_val;
+                }
+                grayData[k + 3] = 255;
+            }
+        }
+
+        return grayData;
+    }
+
+    dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, width, height, callback) {
+        if (!this._helpCanvas) {
+            this._helpCanvas = document.createElement('canvas');
+        }
+
+        var canvas = this._helpCanvas;
+        canvas.width = width;
+        canvas.height = height;
+
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, width, height);
+
+        var imgData = ctx.getImageData(0, 0, width, height);
+        var grayData = imgData.data;
+
+        var max = (2 * windowCenter + windowWidth) / 2.0 + 0.5;
+        var min = (2 * windowCenter - windowWidth) / 2.0 + 0.5;
+        var dFactor = 255.0 / (max - min);
+        dFactor = Math.round(dFactor * 100) / 100;
+
+        var pixelData = this.pixelData;
+        var pixelVal, disp_pixel_val, nPixelVal, index;
+
+        for (var i = 0; i < height; i++) {
+            for (var j = 0; j < width; j++) {
+                
+                pixelVal = pixelData[i * pixelData.width + j];
+
+                index = i * width + j;
+                if (pixelVal < min) {
+                    disp_pixel_val = 0;
+
+                } else if (pixelVal > max) {
+                    disp_pixel_val = 255;
+                } else {
+                    nPixelVal = (pixelVal - min) * dFactor;
+
+                    if (nPixelVal < 0) disp_pixel_val = 0;
+                    else if (nPixelVal > 255) disp_pixel_val = 255;
+                    else disp_pixel_val = nPixelVal;
+                }
+
+                disp_pixel_val = Math.round(disp_pixel_val);
+
+                var k = 4 * index;
+                for (var x = k; x < k + 3; x++) {
+                    grayData[x] = disp_pixel_val;
+                }
+                grayData[k + 3] = 255;
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        var image = new Image();
+        var dv = this;
+        dv.image = image;
+
+        image.onload = function () {
+
+            if (dv.jcImage) {
+                dv.jcImage.del();
+            }
+
+            var imgId = dv.id + "_img_" + dv._newObjectId();
+            jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
+            dv.jcImage = jc('#' + imgId);
+
+            if (callback) {
+                callback.call(dv);
+            }
+        }
+
+        image.src = canvas.toDataURL();
+        
+    }
+
+    dicomViewer.prototype.loadImage = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
+        var dv = this;
+        this.pixelData = pixelData;
+        this.pixelData.width = width;
+        this.pixelData.height = height;
+        this.windowCenter = windowCenter;
+        this.windowWidth = windowWidth;
+
+        //var grayData = pixelDataToGrayData(this.pixelData, windowWidth, windowCenter, width, height);
+        this.adjustWL(windowWidth, windowCenter, width, height, function () {
+
+            dv.draggable(true);
+            dv.isReady = true;
+
+            if (callBack) {
+                callBack.call(dv);
+            }
+
+            dv.bestFit();
+        });
     }
 
     dicomViewer.prototype.initialize = function (canvasId, imgUrl, callBack) {

@@ -17,6 +17,8 @@ namespace WebPACS.Models
         public string ImageUrl { get; set; }
         public double WindowCenter { get; set; }
         public double WindowWidth { get; set; }
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set;}
 
         public string DicomTags { get; set; }
     }

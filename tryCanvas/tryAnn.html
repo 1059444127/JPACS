@@ -24,36 +24,29 @@
 		<script>
 			window.onload = function(){
 				var serializedString = undefined;
-				var tag = new dicomTag(1001, 2101, 'Vij Hock');
+				
 				var tagList = [];
-				tagList.push(tag);
+				tagList.push(new dicomTag(dicomTag.patientName, 'Jerry^Mack'));
+				tagList.push(new dicomTag(dicomTag.patientSex, 'F'));
+				tagList.push(new dicomTag(dicomTag.patientBirthDate, '20160506'));
+				tagList.push(new dicomTag(dicomTag.windowWidth, '2048'));
+				tagList.push(new dicomTag(dicomTag.windowCenter, '1024'));
 				
 				var v1 = new dicomViewer();
 				v1.initialize('c1', 'img/img1.jpg', function(){
 					v1.setDicomTags(tagList);
 					
-					v1.addOverlay(1001,2101,overlayPos.topLeft1, 'topLeft');
-					v1.addOverlay(1001,2101,overlayPos.topLeft2, 'topLeft2');
-					v1.addOverlay(1001,2101,overlayPos.topLeft3, 'topLeft3');
-					v1.addOverlay(1001,2101,overlayPos.topRight1, 'topRight1');
-					v1.addOverlay(1001,2101,overlayPos.topRight2, 'topRight2');
-					v1.addOverlay(1001,2101,overlayPos.topRight3, 'topRight3');
-					v1.addOverlay(1001,2101,overlayPos.bottomLeft1, 'bottomLeft1');
-					v1.addOverlay(1001,2101,overlayPos.bottomLeft2, 'bottomLeft2');
-					v1.addOverlay(1001,2101,overlayPos.bottomLeft3, 'bottomLeft3');
-					v1.addOverlay(1001,2101,overlayPos.bottomRight1, 'bottomRight1');
-					v1.addOverlay(1001,2101,overlayPos.bottomRight2, 'bottomRight2');
-					v1.addOverlay(1001,2101,overlayPos.bottomRight3, 'bottomRight3');
+					v1.addOverlay(dicomTag.patientName,overlayPos.topLeft1);
+					v1.addOverlay(dicomTag.patientSex,overlayPos.topLeft2, 'Sex');
+					v1.addOverlay(dicomTag.patientBirthDate,overlayPos.topLeft3, 'Birth');
+					v1.addOverlay(dicomTag.windowWidth,overlayPos.bottomLeft1, 'W');
+					v1.addOverlay(dicomTag.windowCenter,overlayPos.bottomLeft2, 'L');
+					v1.addOverlay(dicomTag.customScale,overlayPos.bottomRight, 'Scale');
 				});
 				
 				var v2 = new dicomViewer();
 				v2.initialize('c2', 'img/img2.jpg', function(){
-					v2.addOverlay(1001,2101,overlayPos.topLeft1, 'topLeft');
-					v2.addOverlay(1001,2101,overlayPos.topLeft2, 'topLeft2');
-					v2.addOverlay(1001,2101,overlayPos.topLeft3, 'topLeft3');
-					v2.addOverlay(1001,2101,overlayPos.topRight1, 'topRight1');
-					v2.addOverlay(1001,2101,overlayPos.topRight2, 'topRight2');
-					v2.addOverlay(1001,2101,overlayPos.topRight3, 'topRight3');
+
 				});
 				
 				var curViewer = v1;
