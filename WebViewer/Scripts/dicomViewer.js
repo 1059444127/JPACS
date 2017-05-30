@@ -318,45 +318,6 @@
         return this.id + "_obj_" + this._objectIndex;
     }
 
-    function pixelDataToGrayData(pixelData, grayData, windowWidth, windowCenter, width, height) {
-        var max = (2 * windowCenter + windowWidth) / 2.0 + 0.5;
-        var min = (2 * windowCenter - windowWidth) / 2.0 + 0.5;
-        var dFactor = 255.0 / (max - min);
-        dFactor = Math.round(dFactor * 100) / 100;
-
-        var pixelVal, disp_pixel_val, nPixelVal, index;
-
-        for (var i = 0; i < height; i++) {
-            for (var j = 0; j < width; j++) {
-                index = i * pixelData.width + j;
-                pixelVal = pixelData[index];
-
-                if (pixelVal < min) {
-                    disp_pixel_val = 0;
-                    
-                }else if (pixelVal > max) {
-                    disp_pixel_val = 255; 
-                } else {
-                    nPixelVal = (pixelVal - min) * dFactor;
-
-                    if (nPixelVal < 0) disp_pixel_val = 0;
-                    else if (nPixelVal > 255) disp_pixel_val = 255;
-                    else disp_pixel_val = nPixelVal;
-                }
-
-                disp_pixel_val = Math.round(disp_pixel_val);
-
-                var k = 4 * index;
-                for (var x = k; x < k + 3; x++) {
-                    grayData[x] = disp_pixel_val;
-                }
-                grayData[k + 3] = 255;
-            }
-        }
-
-        return grayData;
-    }
-
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, width, height, callback) {
         if (!this._helpCanvas) {
             this._helpCanvas = document.createElement('canvas');
@@ -369,69 +330,53 @@
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, width, height);
 
-        var imgData = ctx.getImageData(0, 0, width, height);
-        var grayData = imgData.data;
-
-        var max = (2 * windowCenter + windowWidth) / 2.0 + 0.5;
-        var min = (2 * windowCenter - windowWidth) / 2.0 + 0.5;
-        var dFactor = 255.0 / (max - min);
-        dFactor = Math.round(dFactor * 100) / 100;
-
-        var pixelData = this.pixelData;
-        var pixelVal, disp_pixel_val, nPixelVal, index;
-
-        for (var i = 0; i < height; i++) {
-            for (var j = 0; j < width; j++) {
-                
-                pixelVal = pixelData[i * pixelData.width + j];
-
-                index = i * width + j;
-                if (pixelVal < min) {
-                    disp_pixel_val = 0;
-
-                } else if (pixelVal > max) {
-                    disp_pixel_val = 255;
-                } else {
-                    nPixelVal = (pixelVal - min) * dFactor;
-
-                    if (nPixelVal < 0) disp_pixel_val = 0;
-                    else if (nPixelVal > 255) disp_pixel_val = 255;
-                    else disp_pixel_val = nPixelVal;
-                }
-
-                disp_pixel_val = Math.round(disp_pixel_val);
-
-                var k = 4 * index;
-                for (var x = k; x < k + 3; x++) {
-                    grayData[x] = disp_pixel_val;
-                }
-                grayData[k + 3] = 255;
-            }
-        }
-
-        ctx.putImageData(imgData, 0, 0);
-
-        var image = new Image();
+        //var imgData = ctx.createImageData(width, height);
+        //var grayData = imgData.data;
         var dv = this;
-        dv.image = image;
 
-        image.onload = function () {
-
-            if (dv.jcImage) {
-                dv.jcImage.del();
+        if (!this._worker) {
+            var workerJs;
+            var sc = document.getElementsByTagName("script");
+            for (idx = 0; idx < sc.length; idx++) {
+                s = sc.item(idx);
+                if (s.src && s.src.match(/dicomWL\.js$/)) {
+                    workerJs = s.src;
+                    break;
+                }
             }
 
-            var imgId = dv.id + "_img_" + dv._newObjectId();
-            jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
-            dv.jcImage = jc('#' + imgId);
+            this._worker = new Worker(workerJs);
+            this._worker.addEventListener('message', function (msg) {
+                dv.pixelData = new Uint16Array(msg.data.pixelData);
+                grayData = new Uint8ClampedArray(msg.data.grayData);
+                var imgData = ctx.createImageData(width, height);
+                imgData.data.set(grayData);// = new Uint8ClampedArray(grayData);
 
-            if (callback) {
-                callback.call(dv);
-            }
+                ctx.putImageData(imgData, 0, 0);
+
+                var image = new Image();
+                dv.image = image;
+                image.onload = function () {
+                    if (dv.jcImage) {
+                        dv.jcImage.del();
+                    }
+
+                    var imgId = dv.id + "_img_" + dv._newObjectId();
+                    jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
+                    dv.jcImage = jc('#' + imgId);
+
+                    if (callback) {
+                        callback.call(dv);
+                    }
+
+                    dv.bestFit();
+                }
+
+                image.src = canvas.toDataURL();
+            }, false);
         }
-
-        image.src = canvas.toDataURL();
-        
+        var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer};
+        this._worker.postMessage(msg, [dv.pixelData.buffer]);
     }
 
     dicomViewer.prototype.loadImage = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
@@ -439,6 +384,8 @@
         this.pixelData = pixelData;
         this.pixelData.width = width;
         this.pixelData.height = height;
+        this.imgWidth = width;
+        this.imgHeight = height;
         this.windowCenter = windowCenter;
         this.windowWidth = windowWidth;
 
@@ -454,79 +401,6 @@
 
             dv.bestFit();
         });
-    }
-
-    dicomViewer.prototype.initialize = function (canvasId, imgUrl, callBack) {
-        var dv = this;
-
-        dv.canvas = document.getElementById(canvasId);
-        dv.canvas.oncontextmenu = function (evt) {
-            dv.onContextMenu.call(dv, evt);
-        };
-        dv.canvas.onmousewheel = function (evt) {
-            dv.onMouseWheel.call(dv, evt);
-        };
-
-        var dImg = new Image();
-        dImg.onload = function () {
-            jc.start(canvasId, true);
-
-            dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
-            dv.olLayer = jc.layer(dv.olLayerId).up('top');
-
-            //register events
-            dv.imgLayer.mousedown(function (arg) {
-                dv.onMouseDown.call(dv, arg)
-            });
-            dv.imgLayer.mousemove(function (arg) {
-                dv.onMouseMove.call(dv, arg)
-            });
-            dv.imgLayer.mouseup(function (arg) {
-                dv.onMouseUp.call(dv, arg)
-            });
-            dv.imgLayer.click(function (arg) {
-                dv.onClick.call(dv, arg)
-            });
-
-            //show image
-            var imgId = dv.id + "_img_" + dv._newObjectId();
-            jc.image(dv.image).id(imgId).layer(dv.imgLayerId);
-            dv.jcImage = jc('#' + imgId);
-
-            dv.draggable(true);
-            dv.isReady = true;
-
-            if (callBack) {
-                callBack.call(dv);
-            }
-
-            dv.bestFit();
-        }
-
-        dImg.src = imgUrl;
-        this.image = dImg;
-    }
-
-    dicomViewer.prototype.reloadImage = function (imgUrl, callback) {
-        var dv = this;
-
-        var dImg = new Image()
-        dImg.onload = function () {
-            if (dv.jcImage) {
-                dv.jcImage.del();
-            }
-
-            var imgId = dv.id + "_img_" + dv._newObjectId();
-            jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
-            dv.jcImage = jc('#' + imgId);
-
-            if (callback) {
-                callback.call(dv);
-            }
-        }
-
-        dImg.src = imgUrl;
-        this.image = dImg;
     }
 
     dicomViewer.prototype.registerEvent = function (obj, type) {

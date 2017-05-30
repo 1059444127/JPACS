@@ -83,7 +83,7 @@ namespace WebPACS.Controllers
                 if (!Directory.Exists(Directory.GetParent(physicalPath).FullName))
                     Directory.CreateDirectory(Directory.GetParent(physicalPath).FullName);
 
-                dcmImage.RenderImage().AsBitmap().Save(physicalPath);
+                //dcmImage.RenderImage().AsBitmap().Save(physicalPath);
             }
 
             ImageViewModel img = new ImageViewModel();

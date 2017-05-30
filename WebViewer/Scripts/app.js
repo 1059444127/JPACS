@@ -7,6 +7,7 @@ window.onload = function () {
     //tagList.push(tag);
 
     var v1 = new dicomViewer('c1');
+
     var baseUrl = window.location.origin;
     if (!window.location.pathname.startsWith('/Image')) {
         baseUrl += '/' + location.pathname.split('/')[1];
