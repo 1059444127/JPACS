@@ -324,7 +324,7 @@
         }
 
         var dv = this;
-        dv._afterAdjustWL = callback;
+        dv._adjustWLCallback = callback;
 
         if (!this._worker) {
             var workerJs;
@@ -353,40 +353,17 @@
                     ctx.clearRect(0, 0, width, height);
 
                     var imageData = ctx.createImageData(width, height);
-                    imageData.data.set(grayData);// = new Uint8ClampedArray(grayData);
+                    imageData.data.set(grayData);
                     ctx.putImageData(imageData, 0, 0);
 
-                    if (dv.jcImage) {
-                        dv.jcImage.del();
-                    }
-                    canvas.src = 'haha';
-                    var imgId = dv.id + "_img_" + dv._newObjectId();
-                    jc.image(canvas).id(imgId).layer(dv.imgLayerId).down('bottom');
-                    dv.jcImage = jc('#' + imgId);
-
-                    if (!!dv._afterAdjustWL) {
-                        dv._afterAdjustWL.call(dv);
-                    }
+                    dv._reloadImg(canvas, dv._adjustWLCallback);
                 } else {
                     var imageData = new ImageData(grayData, width, height);
                     var a = createImageBitmap(imageData, 0, 0, width, height);
 
                     Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
-
                         var imgBitmap = sprites[0];
-                        imgBitmap.src = 'haha';
-
-                        if (dv.jcImage) {
-                            dv.jcImage.del();
-                        }
-
-                        var imgId = dv.id + "_img_" + dv._newObjectId();
-                        jc.image(imgBitmap).id(imgId).layer(dv.imgLayerId).down('bottom');
-                        dv.jcImage = jc('#' + imgId);
-
-                        if (!!dv._afterAdjustWL) {
-                            dv._afterAdjustWL.call(dv);
-                        }
+                        dv._reloadImg(imgBitmap, dv._adjustWLCallback);
                     });
                 }
 
@@ -396,7 +373,23 @@
         this._worker.postMessage(msg, [dv.pixelData.buffer]);
     }
 
-    dicomViewer.prototype.loadImage = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
+    dicomViewer.prototype._reloadImg = function(imgData, callback){
+        var dv = this;
+        if (dv.jcImage) {
+            dv.jcImage.del();
+        }
+
+        imgData.src = 'mock';//in order to make JC work
+        var imgId = dv.id + "_img_" + dv._newObjectId();
+        jc.image(imgData).id(imgId).layer(dv.imgLayerId).down('bottom');
+        dv.jcImage = jc('#' + imgId);
+
+        if (!!callback) {
+            callback.call(dv);
+        }
+    }
+
+    dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
         var dv = this;
         this.pixelData = pixelData;
         this.pixelData.width = width;

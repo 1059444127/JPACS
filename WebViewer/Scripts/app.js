@@ -24,7 +24,7 @@ window.onload = function () {
             var pixelData = new Uint16Array(this.response);
             var len = pixelData.length;
 
-            v1.loadImage(pixelData, imgInfo.imageWidth, imgInfo.imageHeight, imgInfo.windowWidth, imgInfo.windowCenter, function () {
+            v1.load(pixelData, imgInfo.imageWidth, imgInfo.imageHeight, imgInfo.windowWidth, imgInfo.windowCenter, function () {
             alert('success load image');
 
             v1.setDicomTags(tagList);
