@@ -156,7 +156,9 @@ window.onload = function () {
             width = imgInfo.windowWidth;
 
         width += 100;
-        adjustWL(width, center);
+        adjustWL(width, center, function () {
+            alert('btnW add callback');
+        });
 
         imgInfo.windowCenter = center;
         imgInfo.windowWidth = width;

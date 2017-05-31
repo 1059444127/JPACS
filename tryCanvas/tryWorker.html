@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<script type="text/javascript" src="js/tryWorker.js"></script>
+		<script>
+			window.onload = function() {
+				var myWorker = new Worker('js/tryWorker.js');
+
+				function sendMainArrBuff(rBuf){
+					
+					console.info('rBuf[0]', rBuf[0]);
+					console.info('rBuf[1]', rBuf[1]);
+					console.info('rBuf[2]', rBuf[2]);
+					console.info('returned arrBuf len:', rBuf.byteLength);
+				}
+				
+				function handleMessageFromWorker(msg) {
+					console.log('incoming message from worker, msg:', msg);
+					switch(msg.data.aTopic) {
+						case 'do_sendMainArrBuff':
+							var rBuf = new Uint8Array(msg.data.aBuf);
+							sendMainArrBuff(rBuf)
+							break;
+						default:
+							throw 'no aTopic on incoming message to ChromeWorker';
+					}
+				}
+
+				myWorker.addEventListener('message', handleMessageFromWorker);
+
+				// Ok lets create the buffer and send it
+				var arrBuf = new Uint8Array(8);
+				arrBuf[0] = 1;
+				arrBuf[1] = 2;
+				console.info('arrBuf.byteLength pre transfer:', arrBuf.byteLength);
+
+				myWorker.postMessage({
+					aTopic: 'do_sendWorkerArrBuff',
+					aBuf: arrBuf.buffer // The array buffer that we passed to the transferrable section 3 lines below
+				}, [
+					arrBuf.buffer // The array buffer we created 9 lines above
+				]);
+
+				console.info('arrBuf.byteLength post transfer:', arrBuf.byteLength);
+			}
+		</script>
+	</head>
+
+	<body>
+
+	</body>
+
+</html>

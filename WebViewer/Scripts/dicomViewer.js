@@ -323,16 +323,13 @@
             this._helpCanvas = document.createElement('canvas');
         }
 
+        var dv = this;
         var canvas = this._helpCanvas;
         canvas.width = width;
-        canvas.height = height;
-
-        var ctx = canvas.getContext('2d');
+        canvas.height = height,
+        ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, width, height);
-
-        //var imgData = ctx.createImageData(width, height);
-        //var grayData = imgData.data;
-        var dv = this;
+        var theCallback = callback;
 
         if (!this._worker) {
             var workerJs;
@@ -354,25 +351,24 @@
 
                 ctx.putImageData(imgData, 0, 0);
 
-                var image = new Image();
-                dv.image = image;
-                image.onload = function () {
-                    if (dv.jcImage) {
-                        dv.jcImage.del();
+                if (!dv.image) {
+                    dv.image = new Image();
+                    dv.image.onload = function () {
+                        if (dv.jcImage) {
+                            dv.jcImage.del();
+                        }
+
+                        var imgId = dv.id + "_img_" + dv._newObjectId();
+                        jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
+                        dv.jcImage = jc('#' + imgId);
+
+                        if (theCallback) {
+                            theCallback.call(dv);
+                        }
                     }
-
-                    var imgId = dv.id + "_img_" + dv._newObjectId();
-                    jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
-                    dv.jcImage = jc('#' + imgId);
-
-                    if (callback) {
-                        callback.call(dv);
-                    }
-
-                    dv.bestFit();
                 }
 
-                image.src = canvas.toDataURL();
+                dv.image.src = canvas.toDataURL();
             }, false);
         }
         var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer};
@@ -392,12 +388,12 @@
         //var grayData = pixelDataToGrayData(this.pixelData, windowWidth, windowCenter, width, height);
         this.adjustWL(windowWidth, windowCenter, width, height, function () {
 
-            dv.draggable(true);
-            dv.isReady = true;
-
             if (callBack) {
                 callBack.call(dv);
             }
+            alert('onload image callback');
+            dv.draggable(true);
+            dv.isReady = true;
 
             dv.bestFit();
         });
@@ -763,10 +759,12 @@
         this.reset();
         if (widthScale < heightScale) {
             this.imgLayer.scale(widthScale);
-            this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
+            this.imgLayer._y = (canvasHeight - imgHeight * widthScale) / 2;
+            //this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
         } else {
             this.imgLayer.scale(heightScale);
-            this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
+            this.imgLayer._x = (canvasWidth - imgWidth * heightScale) / 2;
+            //this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
         }
 
         this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
