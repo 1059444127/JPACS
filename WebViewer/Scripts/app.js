@@ -148,7 +148,12 @@ window.onload = function () {
         //        alert("Error occured!!" + data.imgSrc);
         //    }
         //});
-        v1.adjustWL(width, center, imgInfo.imageWidth, imgInfo.imageHeight, callback);
+        v1.adjustWL(width, center, imgInfo.imageWidth, imgInfo.imageHeight, function () {
+            console.log('finish adjustWL');
+            if (callback) {
+                callback();
+            }
+        });
     }
 
     $('#btnWA').on('click', function () {

@@ -342,26 +342,54 @@
                 dv.pixelData = new Uint16Array(msg.data.pixelData);
                 grayData = new Uint8ClampedArray(msg.data.grayData);
 
-                /*pass ImageData to jcImage directly instead of using helper cavnas
-                */
-                var imageData = new ImageData(grayData, width, height);
-                Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
+                if (!window.createImageBitmap) {//IE
+                    if (!dv._helpCanvas) {
+                        dv._helpCanvas = document.createElement('canvas');
+                    }
+                    var canvas = dv._helpCanvas;
+                    canvas.width = width;
+                    canvas.height = height,
+                    ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, width, height);
 
-                    var imgBitmap = sprites[0];
-                    imgBitmap.src = 'haha';
-                    
+                    var imageData = ctx.createImageData(width, height);
+                    imageData.data.set(grayData);// = new Uint8ClampedArray(grayData);
+                    ctx.putImageData(imageData, 0, 0);
+
                     if (dv.jcImage) {
                         dv.jcImage.del();
                     }
-
+                    canvas.src = 'haha';
                     var imgId = dv.id + "_img_" + dv._newObjectId();
-                    jc.image(imgBitmap).id(imgId).layer(dv.imgLayerId).down('bottom');
+                    jc.image(canvas).id(imgId).layer(dv.imgLayerId).down('bottom');
                     dv.jcImage = jc('#' + imgId);
 
                     if (!!dv._afterAdjustWL) {
                         dv._afterAdjustWL.call(dv);
                     }
-                });
+                } else {
+                    var imageData = new ImageData(grayData, width, height);
+                    var a = createImageBitmap(imageData, 0, 0, width, height);
+
+                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
+
+                        var imgBitmap = sprites[0];
+                        imgBitmap.src = 'haha';
+
+                        if (dv.jcImage) {
+                            dv.jcImage.del();
+                        }
+
+                        var imgId = dv.id + "_img_" + dv._newObjectId();
+                        jc.image(imgBitmap).id(imgId).layer(dv.imgLayerId).down('bottom');
+                        dv.jcImage = jc('#' + imgId);
+
+                        if (!!dv._afterAdjustWL) {
+                            dv._afterAdjustWL.call(dv);
+                        }
+                    });
+                }
+
             }, false);
         }
         var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer};

@@ -24,11 +24,11 @@ textarea {
 }
 
 canvas{
-	background-color: #f3d9d9;
+	background-color: #000000;
 }
 			
 canvas.selected{
-	background-color: #f3d9d9;
+	background-color: #000000;
 	border: red;
     border-style: solid;
    	border-width: thin;
