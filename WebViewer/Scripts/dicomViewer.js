@@ -324,12 +324,7 @@
         }
 
         var dv = this;
-        var canvas = this._helpCanvas;
-        canvas.width = width;
-        canvas.height = height,
-        ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, width, height);
-        var theCallback = callback;
+        dv._afterAdjustWL = callback;
 
         if (!this._worker) {
             var workerJs;
@@ -346,29 +341,27 @@
             this._worker.addEventListener('message', function (msg) {
                 dv.pixelData = new Uint16Array(msg.data.pixelData);
                 grayData = new Uint8ClampedArray(msg.data.grayData);
-                var imgData = ctx.createImageData(width, height);
-                imgData.data.set(grayData);// = new Uint8ClampedArray(grayData);
 
-                ctx.putImageData(imgData, 0, 0);
+                /*pass ImageData to jcImage directly instead of using helper cavnas
+                */
+                var imageData = new ImageData(grayData, width, height);
+                Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
 
-                if (!dv.image) {
-                    dv.image = new Image();
-                    dv.image.onload = function () {
-                        if (dv.jcImage) {
-                            dv.jcImage.del();
-                        }
-
-                        var imgId = dv.id + "_img_" + dv._newObjectId();
-                        jc.image(dv.image).id(imgId).layer(dv.imgLayerId).down('bottom');
-                        dv.jcImage = jc('#' + imgId);
-
-                        if (theCallback) {
-                            theCallback.call(dv);
-                        }
+                    var imgBitmap = sprites[0];
+                    imgBitmap.src = 'haha';
+                    
+                    if (dv.jcImage) {
+                        dv.jcImage.del();
                     }
-                }
 
-                dv.image.src = canvas.toDataURL();
+                    var imgId = dv.id + "_img_" + dv._newObjectId();
+                    jc.image(imgBitmap).id(imgId).layer(dv.imgLayerId).down('bottom');
+                    dv.jcImage = jc('#' + imgId);
+
+                    if (!!dv._afterAdjustWL) {
+                        dv._afterAdjustWL.call(dv);
+                    }
+                });
             }, false);
         }
         var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer};
@@ -385,13 +378,12 @@
         this.windowCenter = windowCenter;
         this.windowWidth = windowWidth;
 
-        //var grayData = pixelDataToGrayData(this.pixelData, windowWidth, windowCenter, width, height);
         this.adjustWL(windowWidth, windowCenter, width, height, function () {
 
             if (callBack) {
                 callBack.call(dv);
             }
-            alert('onload image callback');
+            
             dv.draggable(true);
             dv.isReady = true;
 
@@ -749,8 +741,8 @@
     }
 
     dicomViewer.prototype.bestFit = function () {
-        var imgWidth = this.image.width,
-			imgHeight = this.image.height,
+        var imgWidth = this.imgWidth,
+			imgHeight = this.imgHeight,
 			canvasWidth = this.canvas.width,
 			canvasHeight = this.canvas.height;
         var widthScale = canvasWidth / imgWidth,
@@ -759,12 +751,12 @@
         this.reset();
         if (widthScale < heightScale) {
             this.imgLayer.scale(widthScale);
-            this.imgLayer._y = (canvasHeight - imgHeight * widthScale) / 2;
-            //this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
+            //this.imgLayer._y = (canvasHeight - imgHeight * widthScale) / 2;
+            this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
         } else {
             this.imgLayer.scale(heightScale);
-            this.imgLayer._x = (canvasWidth - imgWidth * heightScale) / 2;
-            //this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
+            //this.imgLayer._x = (canvasWidth - imgWidth * heightScale) / 2;
+            this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
         }
 
         this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);

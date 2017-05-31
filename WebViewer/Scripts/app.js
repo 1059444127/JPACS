@@ -116,7 +116,7 @@ window.onload = function () {
         curViewer.bestFit();
     });
 
-    function adjustWL(width, center) {
+    function adjustWL(width, center, callback) {
         //var baseUrl = window.location.origin;
         //if (!window.location.pathname.startsWith('/Image')) {
         //    baseUrl += '/' + location.pathname.split('/')[1];
@@ -148,7 +148,7 @@ window.onload = function () {
         //        alert("Error occured!!" + data.imgSrc);
         //    }
         //});
-        v1.adjustWL(width, center, imgInfo.imageWidth, imgInfo.imageHeight);
+        v1.adjustWL(width, center, imgInfo.imageWidth, imgInfo.imageHeight, callback);
     }
 
     $('#btnWA').on('click', function () {
@@ -157,7 +157,7 @@ window.onload = function () {
 
         width += 100;
         adjustWL(width, center, function () {
-            alert('btnW add callback');
+            //alert('btnW add callback');
         });
 
         imgInfo.windowCenter = center;
