@@ -52,18 +52,19 @@
 </table>
 
 @section Scripts {
-    @Scripts.Render("~/scripts/dicomWL.js")
+    @Scripts.Render("~/scripts/wlWorker.js")
+    @Scripts.Render("~/scripts/imgDataWorker.js")
     @Scripts.Render("~/scripts/dicomViewer.js")
     @Scripts.Render("~/scripts/app.js")
 }
 
 <script>
-    var imgInfo = {};
-    imgInfo.ImageUrl = '@Model.ImageUrl';
-    imgInfo.imageWidth = @Model.ImageWidth;
-    imgInfo.imageHeight = @Model.ImageHeight;
-    imgInfo.windowCenter = @Model.WindowCenter;
-    imgInfo.windowWidth = @Model.WindowWidth;
-    imgInfo.dicomTags = JSON.parse('@Html.Raw(@Model.DicomTags)');
+    var dcmFile = {};
+    dcmFile.dicomTags = JSON.parse('@Html.Raw(@Model.DicomTags)');
+    dcmFile.imgWidth =  @Model.ImageWidth;
+    dcmFile.imgHeight =  @Model.ImageHeight;
+    dcmFile.windowWidth = @Model.WindowWidth;
+    dcmFile.windowCenter = @Model.WindowCenter;
+    dcmFile.id = @Model.Id;
 
 </script>

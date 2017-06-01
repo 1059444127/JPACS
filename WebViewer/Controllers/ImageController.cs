@@ -89,6 +89,7 @@ namespace WebPACS.Controllers
             img.WindowWidth = dcmImage.WindowWidth;
             img.ImageWidth = dcmImage.Width;
             img.ImageHeight = dcmImage.Height;
+            img.Id = id;
 
             List<DicomTagModel> tags = new List<DicomTagModel>();
             AddDicomTags(tags, dcmImage.Dataset);
@@ -105,7 +106,7 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileContentResult GetImgageData(int id)
+        public FileContentResult GetPixelData(int id)
         {
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
             Image image = images.First<Image>(i => i.Id == id);
@@ -124,7 +125,7 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileContentResult GetImageData2()
+        public FileContentResult GetImageData()
         {
             return null;
         }

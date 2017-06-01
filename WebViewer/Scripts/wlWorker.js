@@ -48,7 +48,7 @@ addEventListener('message', function (msg) {
         }
     }
 
-    postMessage({'pixelData':pixelData.buffer, 'grayData':grayData.buffer},[pixelData.buffer, grayData.buffer]);
+    postMessage({'width':width, 'height':height, 'windowWidth': windowWidth, 'windowCenter':windowCenter, 'pixelData':pixelData.buffer, 'grayData':grayData.buffer},[pixelData.buffer, grayData.buffer]);
 
 }, false);
 

@@ -267,7 +267,6 @@
     function dicomFile() {
         this.id = undefined;
         this.imgDataUrl = undefined;
-        this.pixelData = undefined;//optional
         this.imgWidth = 0;
         this.imgHeight = 0;
         this.windowWidth = 0;
@@ -281,12 +280,11 @@
     /*********************************
 	 * the dicomViewer class
 	 */
-    //imgDataUrl is the API to get image data (with window width/center);
-    function dicomViewer(canvasId, imgDataUrl) {
+    function dicomViewer(canvasId, localWL) {
         this.version = 1; //for serialize
         this.id = newViewerId();
         this.canvasId = canvasId;
-        this.imgDataUrl = imgDataUrl;
+        this.localWL = !!localWL;
 
         this.annotationList = [];
         this.overlayList = [];
@@ -331,17 +329,25 @@
         });
     }
 
-    dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
-        var dv = this;
-        this.pixelData = pixelData;
-        this.pixelData.width = width;
-        this.pixelData.height = height;
-        this.imgWidth = width;
-        this.imgHeight = height;
-        this.windowCenter = windowCenter;
-        this.windowWidth = windowWidth;
+    dicomViewer.prototype._newObjectId = function () {
+        this._objectIndex++;
+        return this.id + "_obj_" + this._objectIndex;
+    }
 
-        this.adjustWL2(windowWidth, windowCenter, function () {
+    //dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
+    dicomViewer.prototype.load = function (dicomFile, callBack) {
+        this.dicomFile = dicomFile;
+        this.imgWidth = dicomFile.imgWidth;
+        this.imgHeight = dicomFile.imgHeight;
+        this.windowCenter = dicomFile.windowCenter;
+        this.windowWidth = dicomFile.windowWidth;
+        this.imgDataUrl = dicomFile.imgDataUrl;
+        this.dicomTagList = dicomFile.dicomTags;
+
+        //TODO:load overlay, annotation list, transform form dicomFile, etc.
+
+        var dv = this;
+        this.adjustWL(this.windowWidth, this.windowCenter, function () {
             if (callBack) {
                 callBack.call(dv);
             }
@@ -349,18 +355,37 @@
             dv.draggable(true);
             dv.isReady = true;
 
-            dv.bestFit();//should read last time's transform and apply them
+            dv.bestFit();//TODO:should read last time's transform and apply them
         });
     }
 
-    dicomViewer.prototype._newObjectId = function () {
-        this._objectIndex++;
-        return this.id + "_obj_" + this._objectIndex;
-    }
-
-    dicomViewer.prototype.adjustWL2 = function (windowWidth, windowCenter, callback) {
+    dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
         var dv = this;
         dv._adjustWLCallback = callback;
+
+        if (this.localWL) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', dv.imgDataUrl, true);
+            xhr.responseType = 'arraybuffer';
+
+            xhr.onload = function (e) {
+                if (this.status == 200) {
+                    //get binary data as a response
+                    dv.pixelData = new Uint16Array(this.response);
+                    dv._adjustWLLocal(windowWidth, windowCenter, dv.imgWidth, dv.imgHeight);
+                } else {
+                    alert('failed to get image data');
+                }
+            };
+
+            xhr.send();
+        } else {
+            this._adjustWLFromServer(windowWidth, windowCenter);
+        }
+    }
+
+    dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
+        var dv = this;
 
         if (!this._imgDataWorker) {
             var workerJs;
@@ -408,25 +433,25 @@
         this._imgDataWorker.postMessage({ 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl });
     }
 
-    dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, width, height, callback) {
+    dicomViewer.prototype._adjustWLLocal = function (windowWidth, windowCenter, width, height) {
         var dv = this;
-        dv._adjustWLCallback = callback;
 
-        if (!this._worker) {
+        if (!this._wlWorker) {
             var workerJs;
             var sc = document.getElementsByTagName("script");
             for (idx = 0; idx < sc.length; idx++) {
                 s = sc.item(idx);
-                if (s.src && s.src.match(/dicomWL\.js$/)) {
+                if (s.src && s.src.match(/wlWorker\.js$/)) {
                     workerJs = s.src;
                     break;
                 }
             }
 
-            this._worker = new Worker(workerJs);
-            this._worker.addEventListener('message', function (msg) {
+            this._wlWorker = new Worker(workerJs);
+            this._wlWorker.addEventListener('message', function (msg) {
                 dv.pixelData = new Uint16Array(msg.data.pixelData);
                 var grayData = new Uint8ClampedArray(msg.data.grayData);
+                var width = msg.data.width, height = msg.data.height, windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter;
 
                 if (!window.createImageBitmap) {//IE
                     if (!dv._helpCanvas) {
@@ -442,24 +467,24 @@
                     imageData.data.set(grayData);
                     ctx.putImageData(imageData, 0, 0);
 
-                    dv._reloadImg(canvas, dv._adjustWLCallback);
+                    dv._reloadImgWithWL(canvas, windowWidth, windowCenter, dv._adjustWLCallback);
                 } else {
                     var imageData = new ImageData(grayData, width, height);
                     var a = createImageBitmap(imageData, 0, 0, width, height);
 
                     Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
                         var imgBitmap = sprites[0];
-                        dv._reloadImg(imgBitmap, dv._adjustWLCallback);
+                        dv._reloadImgWithWL(imgBitmap, windowWidth, windowCenter, dv._adjustWLCallback);
                     });
                 }
 
             }, false);
         }
         var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer };
-        this._worker.postMessage(msg, [dv.pixelData.buffer]);
+        this._wlWorker.postMessage(msg, [dv.pixelData.buffer]);
     }
 
-    dicomViewer.prototype._reloadImg = function (imgData, callback) {
+    dicomViewer.prototype._reloadImgWithWL = function (imgData, windowWidth, windowCenter, callback) {
         var dv = this;
         if (dv.jcImage) {
             dv.jcImage.del();
@@ -469,6 +494,11 @@
         var imgId = dv.id + "_img_" + dv._newObjectId();
         jc.image(imgData).id(imgId).layer(dv.imgLayerId).down('bottom');
         dv.jcImage = jc('#' + imgId);
+
+        dv.windowWidth = windowWidth;
+        dv.windowCenter = windowCenter;
+        dv.updateTag(dicomTag.windowWidth, dv.windowWidth);
+        dv.updateTag(dicomTag.windowCenter, dv.windowCenter);
 
         if (!!callback) {
             callback.call(dv);

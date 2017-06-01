@@ -14,6 +14,7 @@ namespace WebPACS.Models
 
     public class ImageViewModel
     {
+        public int Id { get; set; }
         public string ImageUrl { get; set; }
         public double WindowCenter { get; set; }
         public double WindowWidth { get; set; }
