@@ -51,3 +51,5 @@ addEventListener('message', function (msg) {
     postMessage({'pixelData':pixelData.buffer, 'grayData':grayData.buffer},[pixelData.buffer, grayData.buffer]);
 
 }, false);
+
+

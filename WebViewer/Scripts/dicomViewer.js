@@ -260,14 +260,34 @@
         }
     }
 
+    /**********************************
+    * the dicomFile clas
+    */
+
+    function dicomFile() {
+        this.id = undefined;
+        this.imgDataUrl = undefined;
+        this.pixelData = undefined;//optional
+        this.imgWidth = 0;
+        this.imgHeight = 0;
+        this.windowWidth = 0;
+        this.windowCenter = 0;
+        this.dicomTags = [];
+        this.overlayString = '';
+        this.annotationString = '';
+        this.transformString = '';
+    }
 
     /*********************************
 	 * the dicomViewer class
 	 */
-
-    function dicomViewer(canvasId) {
+    //imgDataUrl is the API to get image data (with window width/center);
+    function dicomViewer(canvasId, imgDataUrl) {
         this.version = 1; //for serialize
         this.id = newViewerId();
+        this.canvasId = canvasId;
+        this.imgDataUrl = imgDataUrl;
+
         this.annotationList = [];
         this.overlayList = [];
         this.dicomTagList = [];
@@ -276,14 +296,9 @@
         this.curContext = viewContext.pan;
         this.curSelectObj = undefined;
 
-        this.imgLayerId = this.id + '_imgLayer';
-        this.olLayerId = this.id + '_overlayLayer';
-        this.imgId = this.id + '_img';
-
         this.eventHandlers = {};
         this._objectIndex = 0;
-
-        this.canvasId = canvasId;
+        
         var dv = this;
         this.canvas = document.getElementById(canvasId);
         this.canvas.oncontextmenu = function (evt) {
@@ -295,10 +310,13 @@
 
         jc.start(dv.canvasId, true);
 
+        this.imgLayerId = this.id + '_imgLayer';
+        this.olLayerId = this.id + '_overlayLayer';
+
         dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
         dv.olLayer = jc.layer(dv.olLayerId).up('top');
 
-        //register events
+        //register imglayer events
         dv.imgLayer.mousedown(function (arg) {
             dv.onMouseDown.call(dv, arg)
         });
@@ -313,34 +331,51 @@
         });
     }
 
+    dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
+        var dv = this;
+        this.pixelData = pixelData;
+        this.pixelData.width = width;
+        this.pixelData.height = height;
+        this.imgWidth = width;
+        this.imgHeight = height;
+        this.windowCenter = windowCenter;
+        this.windowWidth = windowWidth;
+
+        this.adjustWL2(windowWidth, windowCenter, function () {
+            if (callBack) {
+                callBack.call(dv);
+            }
+            
+            dv.draggable(true);
+            dv.isReady = true;
+
+            dv.bestFit();//should read last time's transform and apply them
+        });
+    }
+
     dicomViewer.prototype._newObjectId = function () {
         this._objectIndex++;
         return this.id + "_obj_" + this._objectIndex;
     }
 
-    dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, width, height, callback) {
-        if (!this._helpCanvas) {
-            this._helpCanvas = document.createElement('canvas');
-        }
-
+    dicomViewer.prototype.adjustWL2 = function (windowWidth, windowCenter, callback) {
         var dv = this;
         dv._adjustWLCallback = callback;
 
-        if (!this._worker) {
+        if (!this._imgDataWorker) {
             var workerJs;
             var sc = document.getElementsByTagName("script");
             for (idx = 0; idx < sc.length; idx++) {
                 s = sc.item(idx);
-                if (s.src && s.src.match(/dicomWL\.js$/)) {
+                if (s.src && s.src.match(/imgDataWorker\.js$/)) {
                     workerJs = s.src;
                     break;
                 }
             }
 
-            this._worker = new Worker(workerJs);
-            this._worker.addEventListener('message', function (msg) {
-                dv.pixelData = new Uint16Array(msg.data.pixelData);
-                grayData = new Uint8ClampedArray(msg.data.grayData);
+            this._imgDataWorker = new Worker(workerJs);
+            this._imgDataWorker.addEventListener('message', function (msg) {
+                var grayData = new Uint8ClampedArray(msg.data.grayData);
 
                 if (!window.createImageBitmap) {//IE
                     if (!dv._helpCanvas) {
@@ -369,11 +404,62 @@
 
             }, false);
         }
-        var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer};
+
+        this._imgDataWorker.postMessage({ 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl });
+    }
+
+    dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, width, height, callback) {
+        var dv = this;
+        dv._adjustWLCallback = callback;
+
+        if (!this._worker) {
+            var workerJs;
+            var sc = document.getElementsByTagName("script");
+            for (idx = 0; idx < sc.length; idx++) {
+                s = sc.item(idx);
+                if (s.src && s.src.match(/dicomWL\.js$/)) {
+                    workerJs = s.src;
+                    break;
+                }
+            }
+
+            this._worker = new Worker(workerJs);
+            this._worker.addEventListener('message', function (msg) {
+                dv.pixelData = new Uint16Array(msg.data.pixelData);
+                var grayData = new Uint8ClampedArray(msg.data.grayData);
+
+                if (!window.createImageBitmap) {//IE
+                    if (!dv._helpCanvas) {
+                        dv._helpCanvas = document.createElement('canvas');
+                    }
+                    var canvas = dv._helpCanvas;
+                    canvas.width = width;
+                    canvas.height = height,
+                    ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, width, height);
+
+                    var imageData = ctx.createImageData(width, height);
+                    imageData.data.set(grayData);
+                    ctx.putImageData(imageData, 0, 0);
+
+                    dv._reloadImg(canvas, dv._adjustWLCallback);
+                } else {
+                    var imageData = new ImageData(grayData, width, height);
+                    var a = createImageBitmap(imageData, 0, 0, width, height);
+
+                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
+                        var imgBitmap = sprites[0];
+                        dv._reloadImg(imgBitmap, dv._adjustWLCallback);
+                    });
+                }
+
+            }, false);
+        }
+        var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer };
         this._worker.postMessage(msg, [dv.pixelData.buffer]);
     }
 
-    dicomViewer.prototype._reloadImg = function(imgData, callback){
+    dicomViewer.prototype._reloadImg = function (imgData, callback) {
         var dv = this;
         if (dv.jcImage) {
             dv.jcImage.del();
@@ -387,29 +473,6 @@
         if (!!callback) {
             callback.call(dv);
         }
-    }
-
-    dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
-        var dv = this;
-        this.pixelData = pixelData;
-        this.pixelData.width = width;
-        this.pixelData.height = height;
-        this.imgWidth = width;
-        this.imgHeight = height;
-        this.windowCenter = windowCenter;
-        this.windowWidth = windowWidth;
-
-        this.adjustWL(windowWidth, windowCenter, width, height, function () {
-
-            if (callBack) {
-                callBack.call(dv);
-            }
-            
-            dv.draggable(true);
-            dv.isReady = true;
-
-            dv.bestFit();
-        });
     }
 
     dicomViewer.prototype.registerEvent = function (obj, type) {
@@ -790,6 +853,10 @@
 
     //serialize to json string
     dicomViewer.prototype.serialize = function () {
+        //1.annotation list
+        //2.overlay list
+        //3.transform
+        //4.window width/center => to tags
         var str = "{version:{0},annObjects:{1}}";
 
         var strAnnObjs = "[";
@@ -1554,8 +1621,7 @@
     //export definitiens
     window.dicomViewer = dicomViewer;
     window.dicomTag = dicomTag;
-    //window.overlay = overlay;
+    window.dicomFile = dicomFile;
     window.overlayPos = overlayPos;
-    //window.viewContext = viewContext;
 
 })(window, undefined);

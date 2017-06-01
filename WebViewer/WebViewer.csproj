@@ -232,6 +232,7 @@
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\dicomViewer.js" />
     <Content Include="Scripts\dicomWL.js" />
+    <Content Include="Scripts\imgDataWorker.js" />
     <Content Include="Scripts\jCanvaScript.1.5.18.js" />
     <Content Include="Scripts\jquery-1.10.2.js" />
     <Content Include="Scripts\jquery-1.10.2.min.js" />

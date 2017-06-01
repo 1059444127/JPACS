@@ -37,8 +37,9 @@ namespace WebPACS.Controllers
             return View(images);
         }
 
-        private void AddOverlayTags(List<DicomTagModel> tags, DicomDataset ds)
+        private void AddDicomTags(List<DicomTagModel> tags, DicomDataset ds)
         {
+            //pass necessary dicom tags and value to client.
             List<DicomTag> tagsToAdd = new List<DicomTag>
             {
                 DicomTag.PatientName, DicomTag.PatientID, DicomTag.PatientSex, DicomTag.PatientBirthDate, DicomTag.WindowWidth, DicomTag.WindowCenter, DicomTag.StudyTime,
@@ -47,7 +48,6 @@ namespace WebPACS.Controllers
 
             foreach (DicomTag t in tagsToAdd)
             {
-
                 tags.Add(new DicomTagModel()
                 {
                     group = t.Group,
@@ -75,9 +75,6 @@ namespace WebPACS.Controllers
                 SetCache(image.SOPInstanceUid, dcmImage);
             }
 
-            var bytes = dcmImage.PixelData.GetFrame(0);
-
-
             if(!System.IO.File.Exists(physicalPath))
             {
                 if (!Directory.Exists(Directory.GetParent(physicalPath).FullName))
@@ -94,19 +91,21 @@ namespace WebPACS.Controllers
             img.ImageHeight = dcmImage.Height;
 
             List<DicomTagModel> tags = new List<DicomTagModel>();
-            AddOverlayTags(tags, dcmImage.Dataset);
+            AddDicomTags(tags, dcmImage.Dataset);
+
+            //get overylay list from file
+
+            //get annoation list from file
 
             var jsonSerialiser = new JavaScriptSerializer();
             string json = jsonSerialiser.Serialize(tags);
             img.DicomTags = json;
 
-            //ViewBag.ImageInfo = Json(img).ToString();// = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
-
             return View(img);
         }
 
         [HttpGet]
-        public FileContentResult GetPixelData(int id)
+        public FileContentResult GetImgageData(int id)
         {
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
             Image image = images.First<Image>(i => i.Id == id);
@@ -122,6 +121,12 @@ namespace WebPACS.Controllers
             var bytes = dcmImage.PixelData.GetFrame(0);
 
             return File(bytes.Data, "image");
+        }
+
+        [HttpGet]
+        public FileContentResult GetImageData2()
+        {
+            return null;
         }
 
         [HttpPost]
