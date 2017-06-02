@@ -279,6 +279,7 @@
 
     /*********************************
 	 * the dicomViewer class
+     localWL means whether to calculate WL at the client side, default is undefined (false)
 	 */
     function dicomViewer(canvasId, localWL) {
         this.version = 1; //for serialize
@@ -361,6 +362,10 @@
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
         var dv = this;
+        if (!this._imgData) {//used to accept the image data
+            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
+        }
+
         dv._adjustWLCallback = callback;
 
         if (this.localWL) {
@@ -372,7 +377,7 @@
                 if (this.status == 200) {
                     //get binary data as a response
                     dv.pixelData = new Uint16Array(this.response);
-                    dv._adjustWLLocal(windowWidth, windowCenter, dv.imgWidth, dv.imgHeight);
+                    dv._adjustWLLocal(windowWidth, windowCenter);
                 } else {
                     alert('failed to get image data');
                 }
@@ -386,7 +391,7 @@
 
     dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
         var dv = this;
-
+        var worker = this._imgDataWorker;
         if (!this._imgDataWorker) {
             var workerJs;
             var sc = document.getElementsByTagName("script");
@@ -398,60 +403,21 @@
                 }
             }
 
+            this._imgDataRequest = [];
             this._imgDataWorker = new Worker(workerJs);
+            this._imgDataWorker.isBusy = false;
+
             this._imgDataWorker.addEventListener('message', function (msg) {
                 var grayData = new Uint8ClampedArray(msg.data.grayData);
+                var windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter,
+                    width = dv.imgWidth, height = dv.imgHeight,
+                    success = msg.data.success;
+                dv._imgData = grayData;
 
-                if (!window.createImageBitmap) {//IE
-                    if (!dv._helpCanvas) {
-                        dv._helpCanvas = document.createElement('canvas');
-                    }
-                    var canvas = dv._helpCanvas;
-                    canvas.width = width;
-                    canvas.height = height,
-                    ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, width, height);
-
-                    var imageData = ctx.createImageData(width, height);
-                    imageData.data.set(grayData);
-                    ctx.putImageData(imageData, 0, 0);
-
-                    dv._reloadImg(canvas, dv._adjustWLCallback);
-                } else {
-                    var imageData = new ImageData(grayData, width, height);
-                    var a = createImageBitmap(imageData, 0, 0, width, height);
-
-                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
-                        var imgBitmap = sprites[0];
-                        dv._reloadImg(imgBitmap, dv._adjustWLCallback);
-                    });
+                if (!success) {
+                    console.log('failed to request imgdata.')
+                    return;
                 }
-
-            }, false);
-        }
-
-        this._imgDataWorker.postMessage({ 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl });
-    }
-
-    dicomViewer.prototype._adjustWLLocal = function (windowWidth, windowCenter, width, height) {
-        var dv = this;
-
-        if (!this._wlWorker) {
-            var workerJs;
-            var sc = document.getElementsByTagName("script");
-            for (idx = 0; idx < sc.length; idx++) {
-                s = sc.item(idx);
-                if (s.src && s.src.match(/wlWorker\.js$/)) {
-                    workerJs = s.src;
-                    break;
-                }
-            }
-
-            this._wlWorker = new Worker(workerJs);
-            this._wlWorker.addEventListener('message', function (msg) {
-                dv.pixelData = new Uint16Array(msg.data.pixelData);
-                var grayData = new Uint8ClampedArray(msg.data.grayData);
-                var width = msg.data.width, height = msg.data.height, windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter;
 
                 if (!window.createImageBitmap) {//IE
                     if (!dv._helpCanvas) {
@@ -478,10 +444,108 @@
                     });
                 }
 
+                console.log('finish imgData: ' + windowWidth + "," + windowCenter);
+                dv._imgDataWorker.isBusy = false;
+
+                if (dv._imgDataRequest.length > 0) {
+                    var req = dv._imgDataRequest.pop();
+                    req['grayData'] = dv._imgData.buffer;
+                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                    dv._imgDataWorker.postMessage(req, [dv._imgData.buffer]);
+                    dv._imgDataWorker.isBusy = true;
+
+                    dv._imgDataRequest = [];
+                }
             }, false);
         }
-        var msg = { 'imgWidth': dv.imgWidth, 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': width, 'height': height, 'pixelData': dv.pixelData.buffer };
-        this._wlWorker.postMessage(msg, [dv.pixelData.buffer]);
+
+        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl };
+        request['grayData'] = dv._imgData.buffer;
+        if (this._imgDataWorker.isBusy) {
+            console.info('push request: ' + request.windowWidth + ',' + request.windowCenter);
+            this._imgDataRequest.push(request);
+        } else {
+            this._imgDataWorker.postMessage(request, [dv._imgData.buffer]);
+            dv._imgDataWorker.isBusy = true;
+        }
+    }
+
+    dicomViewer.prototype._adjustWLLocal = function (windowWidth, windowCenter) {
+        var dv = this;
+
+        if (!this._wlWorker) {
+            var workerJs;
+            var sc = document.getElementsByTagName("script");
+            for (idx = 0; idx < sc.length; idx++) {
+                s = sc.item(idx);
+                if (s.src && s.src.match(/wlWorker\.js$/)) {
+                    workerJs = s.src;
+                    break;
+                }
+            }
+
+            this._wlReqeust = [];
+            this._wlWorker = new Worker(workerJs);
+            this._wlWorker.isBusy = false;
+
+            this._wlWorker.addEventListener('message', function (msg) {
+                dv.pixelData = new Uint16Array(msg.data.pixelData);
+                var grayData = new Uint8ClampedArray(msg.data.grayData);
+                var width = msg.data.width, height = msg.data.height, windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter;
+                dv._imgData = grayData;
+
+                if (!window.createImageBitmap) {//IE
+                    if (!dv._helpCanvas) {
+                        dv._helpCanvas = document.createElement('canvas');
+                    }
+                    var canvas = dv._helpCanvas;
+                    canvas.width = width;
+                    canvas.height = height,
+                    ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, width, height);
+
+                    var imageData = ctx.createImageData(width, height);
+                    imageData.data.set(grayData);
+                    ctx.putImageData(imageData, 0, 0);
+
+                    dv._reloadImgWithWL(canvas, windowWidth, windowCenter, dv._adjustWLCallback);
+                } else {
+                    var imageData = new ImageData(grayData, width, height);
+                    var a = createImageBitmap(imageData, 0, 0, width, height);
+
+                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
+                        var imgBitmap = sprites[0];
+                        dv._reloadImgWithWL(imgBitmap, windowWidth, windowCenter, dv._adjustWLCallback);
+                    });
+                }
+
+                console.log('finish adjustWL: ' + windowWidth + "," + windowCenter);
+                dv._wlWorker.isBusy = false;
+
+                if (dv._wlReqeust.length > 0) {
+                    var req = dv._wlReqeust.pop();
+                    req['pixelData'] = dv.pixelData.buffer;
+                    req['grayData'] = dv._imgData.buffer;
+                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                    dv._wlWorker.postMessage(req, [dv.pixelData.buffer, dv._imgData.buffer]);
+                    dv._wlWorker.isBusy = true;
+
+                    dv._wlReqeust = [];
+                }
+
+            }, false);
+        }
+
+        var request = {'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': this.imgWidth, 'height': this.imgHeight };
+        request['pixelData'] = dv.pixelData.buffer;
+        request['grayData'] = dv._imgData.buffer;
+        if (this._wlWorker.isBusy) {
+            console.info('push request: ' + request.windowWidth + ',' + request.windowCenter);
+            this._wlReqeust.push(request);
+        } else {
+            this._wlWorker.postMessage(request, [dv.pixelData.buffer, dv._imgData.buffer]);
+            dv._wlWorker.isBusy = true;
+        }        
     }
 
     dicomViewer.prototype._reloadImgWithWL = function (imgData, windowWidth, windowCenter, callback) {

@@ -6,21 +6,12 @@ window.onload = function () {
     if (!window.location.pathname.startsWith('/Image')) {
         baseUrl += '/' + location.pathname.split('/')[1];
     }
-    var imgDataUrl = baseUrl + "/Image/GetPixelData/1";
+    //var imgDataUrl = baseUrl + "/Image/GetPixelData/1";
+    var imgDataUrl = baseUrl + "/Image/GetImageData/1";
     dcmFile.imgDataUrl = imgDataUrl;
 
-    var v1 = new dicomViewer('c1', true);
-
-    //var xhr = new XMLHttpRequest();
-    //xhr.open('GET', byteUrl, true);
-    //xhr.responseType = 'arraybuffer';
-
-    //xhr.onload = function (e) {
-    //    if (this.status == 200) {
-            // get binary data as a response
-            //var pixelData = new Uint16Array(this.response);
-            //var len = pixelData.length;
-
+    //var v1 = new dicomViewer('c1', true);
+    var v1 = new dicomViewer('c1');
     v1.load(dcmFile, function () {
         alert('success load image');
 
@@ -39,14 +30,10 @@ window.onload = function () {
         v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight1, "Scale");
     });
 
-    //    } else {
-    //        alert('failed to get image data');
-    //    }
-    //};
-
-    //xhr.send();
-
     var curViewer = v1;
+    var curWindowCenter = v1.windowCenter;
+    var curWindowWidth = v1.windowWidth;
+
     $('#c1').on('click', function () {
         $('#c1').addClass('selected');
         curViewer = v1;
@@ -100,7 +87,6 @@ window.onload = function () {
 
     function adjustWL(width, center, callback) {
         v1.adjustWL(width, center, function () {
-            console.log('finish adjustWL' + width + "," + center);
             if (callback) {
                 callback();
             }
@@ -108,58 +94,21 @@ window.onload = function () {
     }
 
     $('#btnWA').on('click', function () {
-        var center = v1.windowCenter,
-            width = v1.windowWidth;
-
-        width += 100;
-        adjustWL(width, center, function () {
+        curWindowWidth += 100;
+        adjustWL(curWindowWidth, curWindowCenter, function () {
             //alert('btnW add callback');
         });
     });
     $('#btnWM').on('click', function () {
-        var center = v1.windowCenter,
-            width = v1.windowWidth;
-
-        width -= 100;
-        adjustWL(width, center);
+        curWindowWidth -= 100;
+        adjustWL(curWindowWidth, curWindowCenter);
     });
     $('#btnLM').on('click', function () {
-        var center = v1.windowCenter,
-            width = v1.windowWidth;
-
-        center -= 100;
-        adjustWL(width, center);
+        curWindowCenter -= 100;
+        adjustWL(curWindowWidth, curWindowCenter);
     });
     $('#btnLA').on('click', function () {
-        var center = v1.windowCenter,
-            width = v1.windowWidth;
-
-        center += 100;
-        adjustWL(width, center);
-    });
-
-    $('#btnGetByte').on('click', function () {
-        var baseUrl = window.location.origin;
-        if (!window.location.pathname.startsWith('/Image')) {
-            baseUrl += '/' + location.pathname.split('/')[1];
-        }
-        var byteUrl = baseUrl + "/Image/GetPixelData/1";
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', byteUrl, true);
-        xhr.responseType = 'arraybuffer';
-
-        xhr.onload = function (e) {
-            if (this.status == 200) {
-                // get binary data as a response
-                var responseArray = new Uint16Array(this.response);
-                var len = responseArray.length;
-
-            } else {
-                alert('failed to get image data');
-            }
-        };
-
-        xhr.send();
+        curWindowCenter += 100;
+        adjustWL(curWindowWidth, curWindowCenter);
     });
 }

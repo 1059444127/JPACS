@@ -8,34 +8,35 @@ output: Uint8ClampedArray, gray data array, each pixel with 4 bytes: R,G,B,A
 addEventListener('message', function (msg) {
     var data = msg.data;
     var imgDataUrl = data.imgDataUrl;
-    var params = JSON.stringify(msg.data);
+    imgDataUrl += "?windowWidth=" + msg.data.windowWidth + "&windowCenter=" + msg.data.windowCenter;
+    //var params = JSON.stringify({ 'windowWidth': msg.data.windowWidth, 'windowCenter': msg.data.windowCenter });
 
-    var status = 'unknown';
-    var grayData = new Uint8ClampedArray(width * height * 4);
+    var success = true;
+    var grayData = new Uint8ClampedArray(data.grayData);
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', imgDataUrl, true);
     xhr.responseType = 'arraybuffer';
 
-    xhr.setRequestHeader("Content-type", "application/json; charset=utf-8");
-    xhr.setRequestHeader("Content-length", params.length);
-    xhr.setRequestHeader("Connection", "close");
+    //xhr.setRequestHeader("Content-type", "application/json; charset=utf-8");
+    //xhr.setRequestHeader("Content-length", params.length);
+    //xhr.setRequestHeader("Connection", "close");
 
     xhr.onload = function (e) {
         if (this.status == 200) {
             // get binary data as a response
-            var dBytesArray = new Uint16Array(this.response);
-            var len = dBytesArray.length;
+            grayData = new Uint8Array(this.response);
+            var len = grayData.length;
 
-            status = 'success';
+            success = true;
+            postMessage({ 'success': success, 'grayData': grayData.buffer }, [grayData.buffer]);
 
         } else {
-            status = 'failed with code: ' + this.status;
-        }
+            success = false;
+            postMessage({ 'success': success, 'grayData': grayData.buffer }, [grayData.buffer]);
 
-        postMessage({ 'status': pixelData.buffer, 'grayData': grayData.buffer }, [grayData.buffer]);
+        }
     };
 
-    xhr.send(params);
-    
+    xhr.send();
 });

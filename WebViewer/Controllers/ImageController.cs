@@ -125,9 +125,32 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileContentResult GetImageData()
+        public FileContentResult GetImageData(int id, int windowWidth, int windowCenter)
         {
-            return null;
+            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
+            Image image = images.First<Image>(i => i.Id == id);
+
+            DicomImage dcmImage;
+            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
+            if (dcmImage == null)
+            {
+                dcmImage = new DicomImage(image.FilePath);
+                SetCache(image.SOPInstanceUid, dcmImage);
+            }
+
+            double originCenter = dcmImage.WindowCenter;
+            double originWidth = dcmImage.WindowWidth;
+
+            dcmImage.WindowWidth = windowWidth;
+            dcmImage.WindowCenter = windowCenter;
+
+            MemoryStream ms = new MemoryStream();
+            dcmImage.RenderImage().AsBitmap().Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+
+            dcmImage.WindowCenter = originCenter;
+            dcmImage.WindowWidth = originWidth;
+
+            return File(ms.ToArray(), "image/png");
         }
 
         [HttpPost]

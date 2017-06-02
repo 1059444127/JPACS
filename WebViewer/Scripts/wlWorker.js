@@ -9,9 +9,9 @@ Output: gray data array, each pixel with 4 bytes: R,G,B,A
 addEventListener('message', function (msg) {
     var data = msg.data;
     var pixelData = new Uint16Array(data.pixelData), windowWidth = data.windowWidth, windowCenter = data.windowCenter,
-        width = data.width, height = data.height, imgWidth = data.imgWidth;
+        width = data.width, height = data.height;
 
-    var grayData = new Uint8ClampedArray(width*height*4);
+    var grayData = new Uint8ClampedArray(data.grayData);
 
     var max = (2 * windowCenter + windowWidth) / 2.0 + 0.5;
     var min = (2 * windowCenter - windowWidth) / 2.0 + 0.5;
@@ -23,7 +23,7 @@ addEventListener('message', function (msg) {
     for (var i = 0; i < height; i++) {
         for (var j = 0; j < width; j++) {
 
-            pixelVal = pixelData[i * imgWidth + j];
+            pixelVal = pixelData[i * width + j];
 
             index = i * width + j;
             if (pixelVal < min) {
