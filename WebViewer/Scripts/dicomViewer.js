@@ -385,7 +385,129 @@
 
             xhr.send();
         } else {
-            this._adjustWLFromServer(windowWidth, windowCenter);
+            this._adjustWLFromServer2(windowWidth, windowCenter);
+        }
+    }
+
+    dicomViewer.prototype._requestPixelData = function (request) {
+        var dv = this;
+
+        console.log(new Date().toLocaleTimeString() + ': start request pixel data,' + request.windowWidth + ',' + request.windowCenter);
+
+        var imgDataUrl = dv.imgDataUrl;
+        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', imgDataUrl, true);
+        xhr.responseType = 'arraybuffer';
+
+        xhr.onload = function (e) {
+            if (this.status == 200) {
+                
+                console.log(new Date().toLocaleTimeString() + ': end request pixel data');
+                dv._imgData = new Uint8ClampedArray(this.response);
+                // get binary data as a response
+                //var bytes = new Uint8Array(this.response);
+                //var len = bytes.length;
+                ////grayData = bytes;
+                //var curValue, index;
+                //for (var i = 0; i < len; i++) {
+                //    curValue = bytes[i];
+                //    index = 4 * i;
+                //    dv._imgData[index] = curValue;
+                //    dv._imgData[index + 1] = curValue;
+                //    dv._imgData[index + 2] = curValue;
+                //    dv._imgData[index + 3] = 255;
+                //}
+
+                console.log(new Date().toLocaleTimeString() + ': start load image');
+
+                var canvas = dv._helpCanvas, width = dv.imgWidth, height = dv.imgHeight;
+                canvas.width = width;
+                canvas.height = height,
+                ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, width, height);
+
+                var imageData = ctx.createImageData(width, height);
+                imageData.data.set(dv._imgData);
+                ctx.putImageData(imageData, 0, 0);
+
+                dv._reloadImgWithWL(canvas, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
+
+                delete dv._imgData;
+                dv._imgData = undefined;//release the buff
+
+                console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
+                dv._imgDataWorker.isBusy = false;
+
+                if (dv._imgDataRequest.length > 0) {
+                    var req = dv._imgDataRequest.pop();
+
+                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                    dv._requestPixelData(req);
+                    dv._imgDataWorker.isBusy = true;
+
+                    dv._imgDataRequest = [];
+                }
+            } else {
+
+            }
+        };
+
+        xhr.send();
+    }
+
+    dicomViewer.prototype._requestImgFile = function (request) {
+        var dv = this;
+
+        console.log(new Date().toLocaleTimeString() + ': start request image file,' + request.windowWidth + ',' + request.windowCenter);
+
+        var imgDataUrl = dv.imgDataUrl;
+        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
+
+        var img = new Image();
+        img.onload = function () {
+            dv._reloadImgWithWL(img, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
+
+            console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
+            dv._imgDataWorker.isBusy = false;
+
+            if (dv._imgDataRequest.length > 0) {
+                var req = dv._imgDataRequest.pop();
+
+                console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                dv._requestImgFile(req);
+                dv._imgDataRequest = [];
+            }
+        }
+
+        img.src = imgDataUrl;
+    }
+
+    dicomViewer.prototype._adjustWLFromServer2 = function (windowWidth, windowCenter) {
+        var dv = this;
+
+        ////directly get image data
+        if (!dv._helpCanvas) {
+            dv._helpCanvas = document.createElement('canvas');
+        }
+
+        if (!this._imgDataWorker) {
+            this._imgDataWorker = {};
+            this._imgDataRequest = [];
+            this._imgDataWorker.isBusy = false;
+        }
+
+        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl };
+        //request['grayData'] = dv._imgData.buffer;
+        if (dv._imgDataWorker.isBusy) {
+            console.info('push request: ' + windowWidth + ',' + windowCenter);
+            this._imgDataRequest.push(request);
+        } else {
+            //this._imgDataWorker.postMessage(request, [dv._imgData.buffer]);
+            //this._requestPixelData(request);
+            this._requestImgFile(request);
+            dv._imgDataWorker.isBusy = true;
         }
     }
 
@@ -554,7 +676,10 @@
             dv.jcImage.del();
         }
 
-        imgData.src = 'mock';//in order to make JC work
+        if (!imgData.src) {
+            imgData.src = 'mock';//in order to make JC work
+        }
+        
         var imgId = dv.id + "_img_" + dv._newObjectId();
         jc.image(imgData).id(imgId).layer(dv.imgLayerId).down('bottom');
         dv.jcImage = jc('#' + imgId);

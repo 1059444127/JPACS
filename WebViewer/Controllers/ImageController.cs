@@ -9,9 +9,33 @@ using System.Web;
 using System.Web.Mvc;
 using WebPACS.Models;
 using System.Web.Script.Serialization;
+using System.IO.Compression;
 
 namespace WebPACS.Controllers
 {
+    public class CompressAttribute : ActionFilterAttribute
+    {
+        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            var acceptEncoding = filterContext.HttpContext.Request.Headers["Accept-Encoding"];
+            if (!string.IsNullOrEmpty(acceptEncoding))
+            {
+                acceptEncoding = acceptEncoding.ToLower();
+                var response = filterContext.HttpContext.Response;
+                if (acceptEncoding.Contains("gzip"))
+                {
+                    response.AppendHeader("Content-encoding", "gzip");
+                    response.Filter = new GZipStream(response.Filter, CompressionMode.Compress);
+                }
+                else if (acceptEncoding.Contains("deflate"))
+                {
+                    response.AppendHeader("Content-encoding", "deflate");
+                    response.Filter = new DeflateStream(response.Filter, CompressionMode.Compress);
+                }
+            }
+        }
+    }
+
     public class ImageController : Controller
     {
         public static object GetCache(string CacheKey)
@@ -62,11 +86,6 @@ namespace WebPACS.Controllers
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
             Image image = images.First<Image>(i => i.Id == id);
 
-            string imageUrl = "~/Images/" + image.SOPInstanceUid + ".jpg";
-            string physicalPath = Server.MapPath(imageUrl);
-
-            //generate image file
-
             DicomImage dcmImage;
             dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
             if(dcmImage == null)
@@ -75,16 +94,7 @@ namespace WebPACS.Controllers
                 SetCache(image.SOPInstanceUid, dcmImage);
             }
 
-            if(!System.IO.File.Exists(physicalPath))
-            {
-                if (!Directory.Exists(Directory.GetParent(physicalPath).FullName))
-                    Directory.CreateDirectory(Directory.GetParent(physicalPath).FullName);
-
-                //dcmImage.RenderImage().AsBitmap().Save(physicalPath);
-            }
-
             ImageViewModel img = new ImageViewModel();
-            img.ImageUrl = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext);
             img.WindowCenter = dcmImage.WindowCenter;
             img.WindowWidth = dcmImage.WindowWidth;
             img.ImageWidth = dcmImage.Width;
@@ -106,7 +116,7 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileContentResult GetPixelData(int id)
+        public FileContentResult GetDicomPixel(int id)
         {
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
             Image image = images.First<Image>(i => i.Id == id);
@@ -125,7 +135,72 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileContentResult GetImageData(int id, int windowWidth, int windowCenter)
+        //[Compress] (compress can zip 39M to 5M, but the zip/unzip is more time consuming. if not zip, it takes 1.7s to load 39M, but with zip, it taks 5s to load 5 M)
+        public FileContentResult GetImagePixel(int id, int windowWidth, int windowCenter)
+        {
+            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
+            Image image = images.First<Image>(i => i.Id == id);
+
+            DicomImage dcmImage;
+            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
+            if (dcmImage == null)
+            {
+                dcmImage = new DicomImage(image.FilePath);
+                SetCache(image.SOPInstanceUid, dcmImage);
+            }
+
+            /* pass the pixel bytes is too huge: width*height*4
+             * possible optimize: 
+             * 1. use default gzip, but the zip/unzip is too slow, slower than the original one.
+             * 2. only transfer width*height, and at client size, expand them to 4 plus.
+             * */
+
+            double originCenter = dcmImage.WindowCenter;
+            double originWidth = dcmImage.WindowWidth;
+
+            dcmImage.WindowWidth = windowWidth;
+            dcmImage.WindowCenter = windowCenter;
+
+            var intArray = dcmImage.RenderImage().Pixels.Data;
+
+            byte[] result = new byte[intArray.Length * sizeof(int)];
+            Buffer.BlockCopy(intArray, 0, result, 0, result.Length);
+
+            dcmImage.WindowCenter = originCenter;
+            dcmImage.WindowWidth = originWidth;
+
+            return File(result, "image");
+           
+            /*send byte array pixel data, client side need to multiple each pixel to 4 bytes.
+            double originCenter = dcmImage.WindowCenter;
+            double originWidth = dcmImage.WindowWidth;
+
+            dcmImage.WindowWidth = windowWidth;
+            dcmImage.WindowCenter = windowCenter;
+
+            var intArray = dcmImage.RenderImage().Pixels.Data;
+
+            byte[] result = new byte[intArray.Length];
+
+            int n;
+            byte v;
+            for(int i = 0; i< intArray.Length; i++)
+            {
+                n = intArray[i];
+                v = (byte)(n >> 8);
+
+                result[i] = v;
+            }
+
+            dcmImage.WindowCenter = originCenter;
+            dcmImage.WindowWidth = originWidth;
+
+            return File(result, "image");
+            */
+        }
+
+        [HttpGet]
+        public FileResult GetJPGImageData(int id, int windowWidth, int windowCenter)
         {
             List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
             Image image = images.First<Image>(i => i.Id == id);
@@ -144,17 +219,19 @@ namespace WebPACS.Controllers
             dcmImage.WindowWidth = windowWidth;
             dcmImage.WindowCenter = windowCenter;
 
-            MemoryStream ms = new MemoryStream();
-            dcmImage.RenderImage().AsBitmap().Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            MemoryStream stream = new MemoryStream();
+            dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            
 
             dcmImage.WindowCenter = originCenter;
             dcmImage.WindowWidth = originWidth;
 
-            return File(ms.ToArray(), "image/png");
+            stream.Seek(0, SeekOrigin.Begin);
+            return File(stream, "image/png");
         }
 
         [HttpPost]
-        public ActionResult AdjustWL(ImageViewModel model)
+        public ActionResult GetJPGImageFile(ImageViewModel model)
         {
             try
             {

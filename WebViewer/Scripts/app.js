@@ -6,14 +6,14 @@ window.onload = function () {
     if (!window.location.pathname.startsWith('/Image')) {
         baseUrl += '/' + location.pathname.split('/')[1];
     }
-    //var imgDataUrl = baseUrl + "/Image/GetPixelData/1";
-    var imgDataUrl = baseUrl + "/Image/GetImageData/1";
+    //var imgDataUrl = baseUrl + "/Image/GetDicomPixel/1";
+    var imgDataUrl = baseUrl + "/Image/GetJPGImageData/1";
     dcmFile.imgDataUrl = imgDataUrl;
 
     //var v1 = new dicomViewer('c1', true);
     var v1 = new dicomViewer('c1');
     v1.load(dcmFile, function () {
-        alert('success load image');
+        console.log('success load image!');
 
         var tagList = dcmFile.dicomTags;
         //v1.setDicomTags(tagList);
