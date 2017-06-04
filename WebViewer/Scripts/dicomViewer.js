@@ -190,7 +190,6 @@
         }
     }
 
-
     var globalViewerId = 1;
 
     function newViewerId() {
@@ -335,7 +334,6 @@
         return this.id + "_obj_" + this._objectIndex;
     }
 
-    //dicomViewer.prototype.load = function (pixelData, width, height, windowWidth, windowCenter, callBack) {
     dicomViewer.prototype.load = function (dicomFile, callBack) {
         this.dicomFile = dicomFile;
         this.imgWidth = dicomFile.imgWidth;
@@ -345,7 +343,7 @@
         this.imgDataUrl = dicomFile.imgDataUrl;
         this.dicomTagList = dicomFile.dicomTags;
 
-        //TODO:load overlay, annotation list, transform form dicomFile, etc.
+        //TODO: annotation list, transform form dicomFile, etc. (overlay is viewer-releated, not image-releated)
 
         var dv = this;
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
@@ -358,6 +356,16 @@
 
             dv.bestFit();//TODO:should read last time's transform and apply them
         });
+    }
+
+    dicomViewer.prototype.save = function () {
+        dicomFile.version = this.version;
+        dicomFile.windowWidth = this.windowWidth;
+        dicomFile.windowCenter = this.windowCenter;
+        
+        dicomFile.serializeJSON = this.serialize();
+        
+        return dicomFile;
     }
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
@@ -385,79 +393,11 @@
 
             xhr.send();
         } else {
-            this._adjustWLFromServer2(windowWidth, windowCenter);
+            this._getImgPixelData(windowWidth, windowCenter);
         }
     }
 
-    dicomViewer.prototype._requestPixelData = function (request) {
-        var dv = this;
-
-        console.log(new Date().toLocaleTimeString() + ': start request pixel data,' + request.windowWidth + ',' + request.windowCenter);
-
-        var imgDataUrl = dv.imgDataUrl;
-        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', imgDataUrl, true);
-        xhr.responseType = 'arraybuffer';
-
-        xhr.onload = function (e) {
-            if (this.status == 200) {
-                
-                console.log(new Date().toLocaleTimeString() + ': end request pixel data');
-                dv._imgData = new Uint8ClampedArray(this.response);
-                // get binary data as a response
-                //var bytes = new Uint8Array(this.response);
-                //var len = bytes.length;
-                ////grayData = bytes;
-                //var curValue, index;
-                //for (var i = 0; i < len; i++) {
-                //    curValue = bytes[i];
-                //    index = 4 * i;
-                //    dv._imgData[index] = curValue;
-                //    dv._imgData[index + 1] = curValue;
-                //    dv._imgData[index + 2] = curValue;
-                //    dv._imgData[index + 3] = 255;
-                //}
-
-                console.log(new Date().toLocaleTimeString() + ': start load image');
-
-                var canvas = dv._helpCanvas, width = dv.imgWidth, height = dv.imgHeight;
-                canvas.width = width;
-                canvas.height = height,
-                ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, width, height);
-
-                var imageData = ctx.createImageData(width, height);
-                imageData.data.set(dv._imgData);
-                ctx.putImageData(imageData, 0, 0);
-
-                dv._reloadImgWithWL(canvas, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
-
-                delete dv._imgData;
-                dv._imgData = undefined;//release the buff
-
-                console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
-                dv._imgDataWorker.isBusy = false;
-
-                if (dv._imgDataRequest.length > 0) {
-                    var req = dv._imgDataRequest.pop();
-
-                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
-                    dv._requestPixelData(req);
-                    dv._imgDataWorker.isBusy = true;
-
-                    dv._imgDataRequest = [];
-                }
-            } else {
-
-            }
-        };
-
-        xhr.send();
-    }
-
-    dicomViewer.prototype._requestImgFile = function (request) {
+    dicomViewer.prototype._requestJpgImg = function (request) {
         var dv = this;
 
         console.log(new Date().toLocaleTimeString() + ': start request image file,' + request.windowWidth + ',' + request.windowCenter);
@@ -476,7 +416,7 @@
                 var req = dv._imgDataRequest.pop();
 
                 console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
-                dv._requestImgFile(req);
+                dv._requestJpgImg(req);
                 dv._imgDataRequest = [];
             }
         }
@@ -484,10 +424,10 @@
         img.src = imgDataUrl;
     }
 
-    dicomViewer.prototype._adjustWLFromServer2 = function (windowWidth, windowCenter) {
+    dicomViewer.prototype._getImgPixelData = function (windowWidth, windowCenter) {
         var dv = this;
 
-        ////directly get image data
+        //directly get image data
         if (!dv._helpCanvas) {
             dv._helpCanvas = document.createElement('canvas');
         }
@@ -499,18 +439,16 @@
         }
 
         var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl };
-        //request['grayData'] = dv._imgData.buffer;
         if (dv._imgDataWorker.isBusy) {
             console.info('push request: ' + windowWidth + ',' + windowCenter);
             this._imgDataRequest.push(request);
         } else {
-            //this._imgDataWorker.postMessage(request, [dv._imgData.buffer]);
-            //this._requestPixelData(request);
-            this._requestImgFile(request);
+            this._requestJpgImg(request);
             dv._imgDataWorker.isBusy = true;
         }
     }
 
+    //with worker
     dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
         var dv = this;
         var worker = this._imgDataWorker;
@@ -590,6 +528,75 @@
             this._imgDataWorker.postMessage(request, [dv._imgData.buffer]);
             dv._imgDataWorker.isBusy = true;
         }
+    }
+
+    //not with worker
+    dicomViewer.prototype._adjustWLFromServer2 = function (request) {
+        var dv = this;
+
+        console.log(new Date().toLocaleTimeString() + ': start request pixel data,' + request.windowWidth + ',' + request.windowCenter);
+
+        var imgDataUrl = dv.imgDataUrl;
+        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', imgDataUrl, true);
+        xhr.responseType = 'arraybuffer';
+
+        xhr.onload = function (e) {
+            if (this.status == 200) {
+
+                console.log(new Date().toLocaleTimeString() + ': end request pixel data');
+                dv._imgData = new Uint8ClampedArray(this.response);
+                // get binary data as a response
+                //var bytes = new Uint8Array(this.response);
+                //var len = bytes.length;
+                ////grayData = bytes;
+                //var curValue, index;
+                //for (var i = 0; i < len; i++) {
+                //    curValue = bytes[i];
+                //    index = 4 * i;
+                //    dv._imgData[index] = curValue;
+                //    dv._imgData[index + 1] = curValue;
+                //    dv._imgData[index + 2] = curValue;
+                //    dv._imgData[index + 3] = 255;
+                //}
+
+                console.log(new Date().toLocaleTimeString() + ': start load image');
+
+                var canvas = dv._helpCanvas, width = dv.imgWidth, height = dv.imgHeight;
+                canvas.width = width;
+                canvas.height = height,
+                ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, width, height);
+
+                var imageData = ctx.createImageData(width, height);
+                imageData.data.set(dv._imgData);
+                ctx.putImageData(imageData, 0, 0);
+
+                dv._reloadImgWithWL(canvas, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
+
+                delete dv._imgData;
+                dv._imgData = undefined;//release the buff
+
+                console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
+                dv._imgDataWorker.isBusy = false;
+
+                if (dv._imgDataRequest.length > 0) {
+                    var req = dv._imgDataRequest.pop();
+
+                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                    dv._requestPixelData(req);
+                    dv._imgDataWorker.isBusy = true;
+
+                    dv._imgDataRequest = [];
+                }
+            } else {
+
+            }
+        };
+
+        xhr.send();
     }
 
     dicomViewer.prototype._adjustWLLocal = function (windowWidth, windowCenter) {
@@ -1073,10 +1080,9 @@
     //serialize to json string
     dicomViewer.prototype.serialize = function () {
         //1.annotation list
-        //2.overlay list
-        //3.transform
-        //4.window width/center => to tags
-        var str = "{version:{0},annObjects:{1}}";
+        //2.transform
+        //3.window width/center => to tags
+        var str = "{'version':{0},'annObjects':{1},'transForm':{2}}";
 
         var strAnnObjs = "[";
         if (this.annotationList) {
@@ -1090,8 +1096,13 @@
             }
         }
         strAnnObjs += "]";
+        //please notice the transform order.
+        var transImg = this.imgLayer.transform();
+        var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6 = transImg[1][2];
 
-        str = str.format(this.version, strAnnObjs);
+        var strTrans = "{'n1':{0},'n2':{1},'n3':{2},'n4':{3},'n5':{4},'n6':{5}}".format(n1, n2, n3, n4, n5, n6);
+
+        str = str.format(this.version, strAnnObjs, strTrans);
         return str;
     }
 
@@ -1101,7 +1112,7 @@
             var dv = this;
             var version = jsonObj.version;
             var annObjs = jsonObj.annObjects;
-            var overlay = jsonObj.overlay;
+            var trans = jsonObj.transForm;
 
             annObjs.forEach(function (obj) {
                 var type = obj.type;
@@ -1116,6 +1127,9 @@
                         break;
                 }
             });
+
+            this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
+            this.imgLayer.transform(trans.n1, trans.n2, trans.n3, trans.n4, trans.n5, trans.n6);
 
             dv.selectObject();//select no-object
         }

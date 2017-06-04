@@ -219,6 +219,8 @@ namespace WebPACS.Controllers
             dcmImage.WindowWidth = windowWidth;
             dcmImage.WindowCenter = windowCenter;
 
+            GC.Collect();
+
             MemoryStream stream = new MemoryStream();
             dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
             
