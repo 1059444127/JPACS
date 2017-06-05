@@ -138,7 +138,12 @@ function onDblClickTestRect(){
 	
 	//note the transform sequence, transform return {[1,3,5],[2,4,6]}, but the parameter needs(1, 2, 3, 4, 5, 6)
 	var transImg = jcImgLayer.transform();
-	var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6=transImg[1][2];	
+	var n1 = transImg[0][0], //x scale
+		n3 = transImg[0][1], //
+		n5 = transImg[0][2], //transform dx
+		n2 = transImg[1][0], //
+		n4 = transImg[1][1], //y scale
+		n6 = transImg[1][2]; //transform dy
 
 	jcWorkLayer.transform(n1,n2,n3,n4,n5,n6);
 	var transTmp = jcWorkLayer.transform();

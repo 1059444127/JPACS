@@ -467,6 +467,17 @@
     		return;
     	}
         this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
+        
+        	var transImg = this.imgLayer.transform();
+			var n1 = transImg[0][0], 
+				n3 = transImg[0][1], 
+				n5 = transImg[0][2], 
+				n2 = transImg[1][0], 
+				n4 = transImg[1][1], 
+				n6 = transImg[1][2];
+				
+		var log = "n1:{0},n2:{1},n3:{2},n4:{3},n5:{4},n6:{5}".format(n1,n2,n3,n4,n5,n6);
+		console.log(log);
     }
 
     dicomViewer.prototype.onMouseUp = function (evt) {
@@ -527,7 +538,8 @@
 
         var dv = this;
         var canvas = this.canvas;
-
+		var layer = dv.imgLayer;
+		
         this.imgLayer.draggable({
             disabled: !draggable,
             drag: dv.onDragImage ? dv.onDragImage : function (arg) { },
@@ -537,7 +549,44 @@
             stop: function (arg) {
                 canvas.style.cursor = "default";
             }
+
+//      		disabled: !draggable,
+//      	  	start: function (arg) {
+//	                layer._lastPos = {};
+//	                canvas.style.cursor = "move";
+//	            },
+//	            stop: function (arg) {
+//	                layer._lastPos = {};
+//	                canvas.style.cursor = "default";
+//	            },
+//	            drag: function (arg) {
+//	                //ptImg is mouse position, not the object's start position
+//	                //don't translate any annObject, always keep annObject's transform is clear.
+//					var transTmp = layer.transform();
+//	                var ptImg = screenToImage(arg, transTmp);
+//	
+//	                if (typeof (layer._lastPos.x) != 'undefined') {
+//	                    var deltaX = ptImg.x - layer._lastPos.x;
+//	                    var deltaY = ptImg.y - layer._lastPos.y;
+//						
+//						layer.translate(deltaX, deltaY);
+//	                    //this._x += deltaX;
+//	                    //this._y += deltaY;
+//	                }
+//	
+//	                layer._lastPos = {
+//	                    x: ptImg.x,
+//	                    y: ptImg.y
+//	                };
+//	                
+//	                if(dv.onDragImage){
+//	                	dv.onDragImage(ptImg);
+//	                }
+//	                
+//	                return true;
+//	            }
         });
+
     }
 
     dicomViewer.prototype.setPanModel = function () {
@@ -701,6 +750,11 @@
     dicomViewer.prototype.rotate = function (angle) {
         if (angle > 0) {
             this.imgLayer.rotate(angle, 'center');
+            if(!this._rotateAngle){
+            	this._rotateAngle = angle;
+            }
+            
+            this._rotateAngle += angle;
         }
     }
 
@@ -713,7 +767,9 @@
 
     dicomViewer.prototype.getScale = function () {
         var trans = this.imgLayer.transform();
-        var scale = Math.abs(trans[0][0]);
+        //var scale = Math.abs(trans[0][0]);
+        var scale = this.imgLayer.optns.scaleMatrix[0][0];
+        
         if (scale < 0.1) {
             scale = 0.1
         };
@@ -763,7 +819,7 @@
         //1.annotation list
         //2.transform
         //3.window width/center => to tags
-        var str = "{'version':{0},'annObjects':{1},'transForm':{2}}";
+        var str = "{'version':{0},'scale':{3}, 'rotate':{4}, 'dx':{5}, 'dy':{6},annObjects':{1},'transForm':{2}}";
 
         var strAnnObjs = "[";
         if (this.annotationList) {
@@ -779,11 +835,14 @@
         strAnnObjs += "]";
         //please notice the transform order.
         var transImg = this.imgLayer.transform();
-        var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6 = transImg[1][2];
+        //var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6 = transImg[1][2];
+		var strTrans = JSON.stringify(transImg);
+        //var strTrans = "{'n1':{0},'n2':{1},'n3':{2},'n4':{3},'n5':{4},'n6':{5}}".format(n1, n2, n3, n4, n5, n6);
 
-        var strTrans = "{'n1':{0},'n2':{1},'n3':{2},'n4':{3},'n5':{4},'n6':{5}}".format(n1, n2, n3, n4, n5, n6);
-
-        str = str.format(this.version, strAnnObjs, strTrans);
+		var scale = this.imgLayer.optns.scaleMatrix[0][0];
+		var rotate = this.imgLayer.optns.rotateMatrix[0][0];
+		
+        str = str.format(this.version, strAnnObjs, strTrans, scale);
         return str;
     }
 
@@ -794,11 +853,18 @@
             var version = jsonObj.version;
             var annObjs = jsonObj.annObjects;
             var trans = jsonObj.transForm;
-
-            this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
-            this.imgLayer.transform(trans.n1, trans.n2, trans.n3, trans.n4, trans.n5, trans.n6);
-
-
+			var scale = jsonObj.scale;
+			
+			var trans11 = trans[0][0],//x scale
+				trans21 = trans[0][1],//x rotate
+				transdx = trans[0][2],
+				trans12 = trans[1][0],//y rotate
+				trans22 = trans[1][1],//y scale
+				transdy = trans[1][2];
+			
+            this.imgLayer.transform(trans11, trans12, trans21, trans22, transdx, transdy, true);
+			//this.imgLayer.scale(scale);
+			
             annObjs.forEach(function (obj) {
                 var type = obj.type;
                 switch (type) {
@@ -865,7 +931,7 @@
     annObject.prototype._setChildDraggable = function (jcObj, draggable, onDrag) {
         var dv = this.parent;
         var annObj = this;
-        var transTmp = dv.imgLayer.transform();
+        //var transTmp = dv.imgLayer.transform();
 
         jcObj.draggable({
             disabled: !draggable,
@@ -878,6 +944,7 @@
             drag: function (arg) {
                 //ptImg is mouse position, not the object's start position
                 //don't translate any annObject, always keep annObject's transform is clear.
+				var transTmp = dv.imgLayer.transform();
                 var ptImg = screenToImage(arg, transTmp);
 
                 if (typeof (this._lastPos.x) != 'undefined') {

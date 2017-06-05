@@ -741,6 +741,9 @@
     }
 
     dicomViewer.prototype._handleEvent = function (arg, type, handler) {
+        if (!this.isReady) {
+            return;
+        }
         var handlers = this.eventHandlers[type]
         if (!handlers || handlers.length == 0) {
             return;
@@ -758,14 +761,23 @@
     }
 
     dicomViewer.prototype.onKeyPress = function (key) {
+        if (!this.isReady) {
+            return;
+        }
         alert(key.code);
     }
 
     dicomViewer.prototype.onClick = function (evt) {
+        if (!this.isReady) {
+            return;
+        }
         this._handleEvent(evt, eventType.click, 'onClick');
     }
 
     dicomViewer.prototype.onMouseDown = function (evt) {
+        if (!this.isReady) {
+            return;
+        }
         //if in select context, and not click any object, will unselect all objects.
         if (this.curContext == viewContext.select) {
             if (!evt.event.cancelBubble) {
@@ -791,14 +803,23 @@
     }
 
     dicomViewer.prototype.onMouseMove = function (evt) {
+        if (!this.isReady) {
+            return;
+        }
         this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
     }
 
     dicomViewer.prototype.onMouseUp = function (evt) {
+        if (!this.isReady) {
+            return;
+        }
         this._handleEvent(evt, eventType.mouseUp, 'onMouseUp');
     }
 
     dicomViewer.prototype.onMouseWheel = function (evt) {
+        if (!this.isReady) {
+            return;
+        }
         var scaleValue = 1;
         if (evt.wheelDelta / 120 > 0) {
             //up
@@ -829,7 +850,9 @@
     }
 
     dicomViewer.prototype.onContextMenu = function (evt) {
-
+        if (!this.isReady) {
+            return;
+        }
         if (this.curContext == viewContext.create) {
             this.setContext(viewContext.select);
         }
@@ -1029,8 +1052,7 @@
     }
 
     dicomViewer.prototype.getScale = function () {
-        var trans = this.imgLayer.transform();
-        var scale = Math.abs(trans[0][0]);
+        var scale = this.imgLayer.optns.scaleMatrix[0][0];
         if (scale < 0.1) {
             scale = 0.1
         };
@@ -1096,11 +1118,9 @@
             }
         }
         strAnnObjs += "]";
-        //please notice the transform order.
-        var transImg = this.imgLayer.transform();
-        var n1 = transImg[0][0], n3 = transImg[0][1], n5 = transImg[0][2], n2 = transImg[1][0], n4 = transImg[1][1], n6 = transImg[1][2];
 
-        var strTrans = "{'n1':{0},'n2':{1},'n3':{2},'n4':{3},'n5':{4},'n6':{5}}".format(n1, n2, n3, n4, n5, n6);
+        var transImg = this.imgLayer.transform();
+        var strTrans = JSON.stringify(transImg);
 
         str = str.format(this.version, strAnnObjs, strTrans);
         return str;
@@ -1113,6 +1133,9 @@
             var version = jsonObj.version;
             var annObjs = jsonObj.annObjects;
             var trans = jsonObj.transForm;
+
+            this.imgLayer.transform(1, trans12, trans21, 1, transdx, transdy, true);
+            this.imgLayer.scale(trans11);
 
             annObjs.forEach(function (obj) {
                 var type = obj.type;
@@ -1127,9 +1150,6 @@
                         break;
                 }
             });
-
-            this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
-            this.imgLayer.transform(trans.n1, trans.n2, trans.n3, trans.n4, trans.n5, trans.n6);
 
             dv.selectObject();//select no-object
         }
