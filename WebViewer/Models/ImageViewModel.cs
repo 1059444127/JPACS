@@ -22,5 +22,7 @@ namespace WebPACS.Models
         public int ImageHeight { get; set;}
 
         public string DicomTags { get; set; }
+
+        public string SerializeJSON { get; set; }
     }
 }

@@ -35,7 +35,7 @@
 </table>
 
 <div>
-    <canvas id="c1" width="1100" height="600"></canvas>
+    <canvas id="idCanvas" width="1100" height="600"></canvas>
 </div>
 
 <table class='toolbarGroup'>
@@ -46,7 +46,6 @@
         <td><input id='btnLM' type="button" value='L-'></td>
         <td><input id='btnDelete' type="button" value='Delete'></td>
         <td><input id='btnSave' type="button" value='Save'></td>
-        <td><input id='btnLoad' type="button" value='Load'></td>
     </tr>
 </table>
 
@@ -65,5 +64,6 @@
     dcmFile.windowWidth = @Model.WindowWidth;
     dcmFile.windowCenter = @Model.WindowCenter;
     dcmFile.id = @Model.Id;
+    dcmFile.serializeJSON = '@Html.Raw(@Model.SerializeJSON)';
 
 </script>

@@ -7,11 +7,11 @@ window.onload = function () {
         baseUrl += '/' + location.pathname.split('/')[1];
     }
     //var imgDataUrl = baseUrl + "/Image/GetDicomPixel/1";
-    var imgDataUrl = baseUrl + "/Image/GetJPGImageData/1";
+    var imgDataUrl = baseUrl + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
     dcmFile.imgDataUrl = imgDataUrl;
 
-    //var v1 = new dicomViewer('c1', true);
-    var v1 = new dicomViewer('c1');
+    //var v1 = new dicomViewer('idCanvas', true);
+    var v1 = new dicomViewer('idCanvas');
     v1.load(dcmFile, function () {
         console.log('success load image!');
 
@@ -71,14 +71,29 @@ window.onload = function () {
     });
 
     $('#btnSave').on('click', function () {
-        serializedString = curViewer.serialize();
-        alert(serializedString);
-    });
+        //serializedString = curViewer.serialize();
+        //alert(serializedString);
+        var dicomFile = curViewer.save();
 
-    $('#btnLoad').on('click', function () {
-        if (serializedString) {
-            curViewer.deSerialize(serializedString);
-        }
+        var saveImgUrl = baseUrl + "/Image/SaveDicomImage/{0}".format(dicomFile.id);
+
+        $.ajax({
+            type: "POST",
+            url: saveImgUrl,
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify(dicomFile),
+            dataType: "json",
+            success: function (message) {
+                if (message && message.result) {
+                    alert('success save data!');
+                    return;
+                }
+                alert('failed to save data due to' + message.reason);
+            },
+            error: function (message) {
+                alert('failed to save data!!');
+            }
+        });
     });
 
     $('#btnBestFit').on('click', function () {

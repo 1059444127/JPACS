@@ -32,6 +32,8 @@ namespace JPACS.Model
 
         void AddImage(ref Image image);
 
+        void UpdateImageFilePath(Image img, string newPath);
+
         #endregion
     }
 }

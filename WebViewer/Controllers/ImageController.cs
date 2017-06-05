@@ -81,18 +81,25 @@ namespace WebPACS.Controllers
             }
         }
 
+        private DicomImage GetDicomImage(int id)
+        {
+            DicomImage dcmImage = GetCache(id.ToString()) as DicomImage;
+            if (dcmImage == null)
+            {
+                List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
+                Image image = images.First<Image>(i => i.Id == id);
+
+                dcmImage = new DicomImage(image.FilePath);
+
+                SetCache(id.ToString(), dcmImage);
+            }
+
+            return dcmImage;
+        }
+
         public ActionResult Details(int id)
         {
-            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-            Image image = images.First<Image>(i => i.Id == id);
-
-            DicomImage dcmImage;
-            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-            if(dcmImage == null)
-            {
-                dcmImage = new DicomImage(image.FilePath);
-                SetCache(image.SOPInstanceUid, dcmImage);
-            }
+            DicomImage dcmImage = GetDicomImage(id);
 
             ImageViewModel img = new ImageViewModel();
             img.WindowCenter = dcmImage.WindowCenter;
@@ -104,13 +111,13 @@ namespace WebPACS.Controllers
             List<DicomTagModel> tags = new List<DicomTagModel>();
             AddDicomTags(tags, dcmImage.Dataset);
 
-            //get overylay list from file
-
-            //get annoation list from file
-
             var jsonSerialiser = new JavaScriptSerializer();
             string json = jsonSerialiser.Serialize(tags);
             img.DicomTags = json;
+
+            DicomTag tgSerialize = new DicomTag(0x11, 0x11);
+            string strJSON = dcmImage.Dataset.Contains(tgSerialize) ? dcmImage.Dataset.Get<string>(tgSerialize, "") : "";
+            img.SerializeJSON = strJSON;
 
             return View(img);
         }
@@ -118,16 +125,7 @@ namespace WebPACS.Controllers
         [HttpGet]
         public FileContentResult GetDicomPixel(int id)
         {
-            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-            Image image = images.First<Image>(i => i.Id == id);
-
-            DicomImage dcmImage;
-            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-            if (dcmImage == null)
-            {
-                dcmImage = new DicomImage(image.FilePath);
-                SetCache(image.SOPInstanceUid, dcmImage);
-            }
+            DicomImage dcmImage = GetDicomImage(id);
 
             var bytes = dcmImage.PixelData.GetFrame(0);
 
@@ -138,16 +136,7 @@ namespace WebPACS.Controllers
         //[Compress] (compress can zip 39M to 5M, but the zip/unzip is more time consuming. if not zip, it takes 1.7s to load 39M, but with zip, it taks 5s to load 5 M)
         public FileContentResult GetImagePixel(int id, int windowWidth, int windowCenter)
         {
-            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-            Image image = images.First<Image>(i => i.Id == id);
-
-            DicomImage dcmImage;
-            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-            if (dcmImage == null)
-            {
-                dcmImage = new DicomImage(image.FilePath);
-                SetCache(image.SOPInstanceUid, dcmImage);
-            }
+            DicomImage dcmImage = GetDicomImage(id);
 
             /* pass the pixel bytes is too huge: width*height*4
              * possible optimize: 
@@ -202,16 +191,7 @@ namespace WebPACS.Controllers
         [HttpGet]
         public FileResult GetJPGImageData(int id, int windowWidth, int windowCenter)
         {
-            List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-            Image image = images.First<Image>(i => i.Id == id);
-
-            DicomImage dcmImage;
-            dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-            if (dcmImage == null)
-            {
-                dcmImage = new DicomImage(image.FilePath);
-                SetCache(image.SOPInstanceUid, dcmImage);
-            }
+            DicomImage dcmImage = GetDicomImage(id);
 
             double originCenter = dcmImage.WindowCenter;
             double originWidth = dcmImage.WindowWidth;
@@ -233,47 +213,40 @@ namespace WebPACS.Controllers
         }
 
         [HttpPost]
-        public ActionResult GetJPGImageFile(ImageViewModel model)
+        public ActionResult SaveDicomImage(int id, ImageViewModel model)
         {
+
             try
             {
                 List<Image> images = DBHelperFacotry.GetDBHelper().GetImages();
-                Image image = images.First<Image>();
+                Image image = images.First<Image>(i => i.Id == id);
 
-                DicomImage dcmImage;
-                dcmImage = GetCache(image.SOPInstanceUid) as DicomImage;
-                if (dcmImage == null)
-                {
-                    dcmImage = new DicomImage(image.FilePath);
-                    SetCache(image.SOPInstanceUid, dcmImage);
-                }
+                DicomImage dcmImage = GetDicomImage(id);
 
-                double originCenter = dcmImage.WindowCenter;
-                double originWidth = dcmImage.WindowWidth;
+                DicomFile dcmFile = new DicomFile(dcmImage.Dataset);
+                dcmFile.Dataset.AddOrUpdate<string>(DicomTag.WindowWidth, model.WindowWidth.ToString());
+                dcmFile.Dataset.AddOrUpdate<string>(DicomTag.WindowCenter, model.WindowCenter.ToString());
 
-                string imageUrl = string.Format("~/Images/{0}_{1}_{2}.jpg", image.SOPInstanceUid, model.WindowCenter, model.WindowWidth);
-                string physicalPath = Server.MapPath(imageUrl);
+                dcmFile.Dataset.AddOrUpdate<string>(new DicomTag(0x11, 0x11), model.SerializeJSON);
 
-                if (!System.IO.File.Exists(physicalPath))
-                {
-                    dcmImage.WindowCenter = model.WindowCenter;
-                    dcmImage.WindowWidth = model.WindowWidth;
-                    dcmImage.RenderImage().AsBitmap().Save(physicalPath);
-                }
+                DateTime dtNow = DateTime.Now;
+                string newFile = string.Format("{0}-{1}-{2}-{3}-{4}-{5}.dcm", dtNow.Year, dtNow.Month, dtNow.Day, dtNow.Hour, dtNow.Minute, dtNow.Second);
+                newFile = Path.Combine(Directory.GetParent(image.FilePath).FullName, newFile);
+                dcmFile.Save(newFile);
 
-                dcmImage.WindowCenter = originCenter;
-                dcmImage.WindowWidth = originWidth;
-
+                DBHelperFacotry.GetDBHelper().UpdateImageFilePath(image, newFile);
+                
                 return Json(new
                 {
-                    imgSrc = UrlHelper.GenerateContentUrl(imageUrl, ControllerContext.HttpContext)
+                    result = true
                 });
             }
             catch (Exception e)
             {
                 return Json(new
                 {
-                    imgSrc = "failed due to " + e.Message
+                    result = false,
+                    reason = e.Message
                 });
             }
         }

@@ -141,6 +141,23 @@ namespace JPACS.Model
         }
     }
 
+        public void UpdateImageFilePath(Image img, string newPath)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+
+                SqlCommand com = new SqlCommand("UPDATE [JPACS].[dbo].[Image] SET [ObjectFilePath] = @filePath WHERE Id = @id");
+                com.Connection = conn;
+                com.CommandType = System.Data.CommandType.Text;
+
+                com.Parameters.AddWithValue("@id", img.Id);
+                com.Parameters.AddWithValue("@filePath", newPath);
+
+                com.ExecuteNonQuery();
+            }
+        }
+
         public List<Image> GetImages()
         {
             List<Image> images = new List<Image>();

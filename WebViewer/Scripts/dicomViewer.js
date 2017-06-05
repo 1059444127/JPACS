@@ -334,16 +334,14 @@
         return this.id + "_obj_" + this._objectIndex;
     }
 
-    dicomViewer.prototype.load = function (dicomFile, callBack) {
-        this.dicomFile = dicomFile;
-        this.imgWidth = dicomFile.imgWidth;
-        this.imgHeight = dicomFile.imgHeight;
-        this.windowCenter = dicomFile.windowCenter;
-        this.windowWidth = dicomFile.windowWidth;
-        this.imgDataUrl = dicomFile.imgDataUrl;
-        this.dicomTagList = dicomFile.dicomTags;
-
-        //TODO: annotation list, transform form dicomFile, etc. (overlay is viewer-releated, not image-releated)
+    dicomViewer.prototype.load = function (dcmFile, callBack) {
+        this.dicomFile = dcmFile;
+        this.imgWidth = dcmFile.imgWidth;
+        this.imgHeight = dcmFile.imgHeight;
+        this.windowCenter = dcmFile.windowCenter;
+        this.windowWidth = dcmFile.windowWidth;
+        this.imgDataUrl = dcmFile.imgDataUrl;
+        this.dicomTagList = dcmFile.dicomTags;
 
         var dv = this;
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
@@ -354,18 +352,26 @@
             dv.draggable(true);
             dv.isReady = true;
 
-            dv.bestFit();//TODO:should read last time's transform and apply them
+            //TODO: annotation list, transform form dicomFile, etc. (overlay is viewer-releated, not image-releated)
+            var strJSON = dcmFile.serializeJSON;
+            if (strJSON) {
+                this.deSerialize(strJSON);
+            } else {
+                this.bestFit();
+            }
         });
     }
 
     dicomViewer.prototype.save = function () {
-        dicomFile.version = this.version;
-        dicomFile.windowWidth = this.windowWidth;
-        dicomFile.windowCenter = this.windowCenter;
+        var dcmFile = {};
+        dcmFile.id = this.dicomFile.id;
+        dcmFile.version = this.version;
+        dcmFile.windowWidth = this.windowWidth;
+        dcmFile.windowCenter = this.windowCenter;
         
-        dicomFile.serializeJSON = this.serialize();
+        dcmFile.serializeJSON = this.serialize();
         
-        return dicomFile;
+        return dcmFile;
     }
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
@@ -1104,7 +1110,7 @@
         //1.annotation list
         //2.transform
         //3.window width/center => to tags
-        var str = "{'version':{0},'annObjects':{1},'transForm':{2}}";
+        var str = '{"version":{0},"annObjects":{1},"transForm":{2}, "scaleMatrix":{3}, "rotateMatrix":{4}, "translateMatrix":{5}}';
 
         var strAnnObjs = "[";
         if (this.annotationList) {
@@ -1120,9 +1126,13 @@
         strAnnObjs += "]";
 
         var transImg = this.imgLayer.transform();
-        var strTrans = JSON.stringify(transImg);
+		var strTrans = JSON.stringify(transImg);
+		
+		var strScaleMatrix = JSON.stringify(this.imgLayer.optns.scaleMatrix);
+		var strRotateMatrix = JSON.stringify(this.imgLayer.optns.rotateMatrix);
+		var strTranslateMatrix = JSON.stringify(this.imgLayer.optns.translateMatrix);
 
-        str = str.format(this.version, strAnnObjs, strTrans);
+        str = str.format(this.version, strAnnObjs, strTrans, strScaleMatrix, strRotateMatrix, strTranslateMatrix);
         return str;
     }
 
@@ -1133,10 +1143,27 @@
             var version = jsonObj.version;
             var annObjs = jsonObj.annObjects;
             var trans = jsonObj.transForm;
+			var scaleMatrix = jsonObj.scaleMatrix;
+			var rotateMatrix = jsonObj.rotateMatrix;
+			var translateMatrix = jsonObj.translateMatrix;
+			
+			var trans11 = trans[0][0],//x scale
+				trans21 = trans[0][1],//x rotate
+				transdx = trans[0][2],
+				trans12 = trans[1][0],//y rotate
+				trans22 = trans[1][1],//y scale
+				transdy = trans[1][2];
+			
+            //this.imgLayer.transform(trans11, trans12, trans21, trans22, transdx, transdy, true);
 
-            this.imgLayer.transform(1, trans12, trans21, 1, transdx, transdy, true);
-            this.imgLayer.scale(trans11);
+			this.imgLayer.transform(1,0,0,1,0,0, true);
 
+			this.imgLayer.optns.scaleMatrix = scaleMatrix;
+			this.imgLayer.optns.rotateMatrix = rotateMatrix;
+			this.imgLayer.optns.translateMatrix = translateMatrix;
+			//this.imgLayer.optns.redraw = 1;
+			this.scale(1);
+			
             annObjs.forEach(function (obj) {
                 var type = obj.type;
                 switch (type) {
@@ -1201,10 +1228,14 @@
     }
 
     annObject.prototype._setChildDraggable = function (jcObj, draggable, onDrag) {
+        if(!jcObj){
+        	return;
+        }
+        
         var dv = this.parent;
         var annObj = this;
-        var transTmp = dv.imgLayer.transform();
-
+        //var transTmp = dv.imgLayer.transform();
+		
         jcObj.draggable({
             disabled: !draggable,
             start: function (arg) {
@@ -1216,6 +1247,7 @@
             drag: function (arg) {
                 //ptImg is mouse position, not the object's start position
                 //don't translate any annObject, always keep annObject's transform is clear.
+				var transTmp = dv.imgLayer.transform();
                 var ptImg = screenToImage(arg, transTmp);
 
                 if (typeof (this._lastPos.x) != 'undefined') {
