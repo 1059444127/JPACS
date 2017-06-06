@@ -2,6 +2,9 @@
 window.onload = function () {
     var serializedString = undefined;
 
+    if (!window.location.origin) {
+        window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+    }
     var baseUrl = window.location.origin;
     if (!window.location.pathname.startsWith('/Image')) {
         baseUrl += '/' + location.pathname.split('/')[1];
@@ -64,10 +67,7 @@ window.onload = function () {
     });
 
     $('#btnDelete').on('click', function () {
-        var curObj = curViewer.curSelectObj;
-        if (curObj) {
-            curViewer.deleteObject(curObj);
-        }
+        curViewer.deleteCurObject(curObj);
     });
 
     $('#btnSave').on('click', function () {

@@ -191,25 +191,32 @@ namespace WebPACS.Controllers
         [HttpGet]
         public FileResult GetJPGImageData(int id, int windowWidth, int windowCenter)
         {
-            DicomImage dcmImage = GetDicomImage(id);
+            try
+            {
+                DicomImage dcmImage = GetDicomImage(id);
 
-            double originCenter = dcmImage.WindowCenter;
-            double originWidth = dcmImage.WindowWidth;
+                double originCenter = dcmImage.WindowCenter;
+                double originWidth = dcmImage.WindowWidth;
 
-            dcmImage.WindowWidth = windowWidth;
-            dcmImage.WindowCenter = windowCenter;
+                dcmImage.WindowWidth = windowWidth;
+                dcmImage.WindowCenter = windowCenter;
 
-            GC.Collect();
+                GC.Collect();
 
-            MemoryStream stream = new MemoryStream();
-            dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-            
+                MemoryStream stream = new MemoryStream();
+                dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
 
-            dcmImage.WindowCenter = originCenter;
-            dcmImage.WindowWidth = originWidth;
 
-            stream.Seek(0, SeekOrigin.Begin);
-            return File(stream, "image/png");
+                dcmImage.WindowCenter = originCenter;
+                dcmImage.WindowWidth = originWidth;
+
+                stream.Seek(0, SeekOrigin.Begin);
+                return File(stream, "image/png");
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
         }
 
         [HttpPost]

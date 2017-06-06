@@ -31,23 +31,19 @@
         <td><input id='btnBestFit' type="button" value='Best Fit'></td>
         <td><input id='btnAddRect' type="button" value='Rect'></td>
         <td><input id='btnAddLine' type="button" value='Line'></td>
-    </tr>
-</table>
-
-<div>
-    <canvas id="idCanvas" width="1100" height="600"></canvas>
-</div>
-
-<table class='toolbarGroup'>
-    <tr>
-        <td><input id='btnWA' type="button" value='W+'></td>
-        <td><input id='btnWM' type="button" value='W-'></td>
-        <td><input id='btnLA' type="button" value='L+'></td>
-        <td><input id='btnLM' type="button" value='L-'></td>
         <td><input id='btnDelete' type="button" value='Delete'></td>
         <td><input id='btnSave' type="button" value='Save'></td>
     </tr>
 </table>
+
+<div>
+    <canvas id="idCanvas" width="1100" height="600" tabindex="1"></canvas>
+</div>
+
+<div id="slider">
+    <div id="custom-handle" class="ui-slider-handle"></div>
+</div>
+
 
 @section Scripts {
     @Scripts.Render("~/scripts/wlWorker.js")

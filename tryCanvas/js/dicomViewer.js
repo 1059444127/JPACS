@@ -6,6 +6,34 @@
  */
 (function (window, undefined) {
 
+    jQuery.fn.onPositionChanged = function (trigger, millis) {
+        if (millis == null) millis = 100;
+        var o = $(this[0]); // our jquery object
+        if (o.length < 1) return o;
+
+        var lastPos = null;
+        var lastOff = null;
+        setInterval(function () {
+            if (o == null || o.length < 1) return o; // abort if element is non existend eny more
+            if (lastPos == null) lastPos = o.position();
+            if (lastOff == null) lastOff = o.offset();
+            var newPos = o.position();
+            var newOff = o.offset();
+            if (lastPos.top != newPos.top || lastPos.left != newPos.left) {
+                $(this).trigger('onPositionChanged', { lastPos: lastPos, newPos: newPos });
+                if (typeof (trigger) == "function") trigger(lastPos, newPos);
+                lastPos = o.position();
+            }
+            if (lastOff.top != newOff.top || lastOff.left != newOff.left) {
+                $(this).trigger('onOffsetChanged', { lastOff: lastOff, newOff: newOff });
+                if (typeof (trigger) == "function") trigger(lastOff, newOff);
+                lastOff = o.offset();
+            }
+        }, millis);
+
+        return o;
+    };
+
     //define enums
     var viewContext = {
         pan: 1,
@@ -296,17 +324,41 @@
 
         this.eventHandlers = {};
         this._objectIndex = 0;
-        
+    }
+
+    dicomViewer.prototype._newObjectId = function () {
+        this._objectIndex++;
+        return this.id + "_obj_" + this._objectIndex;
+    }
+
+    dicomViewer.prototype.load = function (dcmFile, callBack) {
+        this.dicomFile = dcmFile;
+        this.imgWidth = dcmFile.imgWidth;
+        this.imgHeight = dcmFile.imgHeight;
+        this.windowCenter = dcmFile.windowCenter;
+        this.windowWidth = dcmFile.windowWidth;
+        this.imgDataUrl = dcmFile.imgDataUrl;
+        this.dicomTagList = dcmFile.dicomTags;
+
         var dv = this;
-        this.canvas = document.getElementById(canvasId);
+        this.canvas = document.getElementById(dv.canvasId);
         this.canvas.oncontextmenu = function (evt) {
             dv.onContextMenu.call(dv, evt);
         };
         this.canvas.onmousewheel = function (evt) {
             dv.onMouseWheel.call(dv, evt);
         };
+        
+        $(this.canvas).on('keyup', function(key){
+        	dv.onKeyUp.call(dv, key);
+        });
 
         jc.start(dv.canvasId, true);
+
+        $(this.canvas).onPositionChanged(function () {
+            //console.log('canvas pos changed');
+            jc.canvas(dv.canvasId).restart();
+        });
 
         this.imgLayerId = this.id + '_imgLayer';
         this.olLayerId = this.id + '_overlayLayer';
@@ -327,25 +379,7 @@
         dv.imgLayer.click(function (arg) {
             dv.onClick.call(dv, arg)
         });
-    }
 
-    dicomViewer.prototype._newObjectId = function () {
-        this._objectIndex++;
-        return this.id + "_obj_" + this._objectIndex;
-    }
-
-    dicomViewer.prototype.load = function (dicomFile, callBack) {
-        this.dicomFile = dicomFile;
-        this.imgWidth = dicomFile.imgWidth;
-        this.imgHeight = dicomFile.imgHeight;
-        this.windowCenter = dicomFile.windowCenter;
-        this.windowWidth = dicomFile.windowWidth;
-        this.imgDataUrl = dicomFile.imgDataUrl;
-        this.dicomTagList = dicomFile.dicomTags;
-
-        //TODO: annotation list, transform form dicomFile, etc. (overlay is viewer-releated, not image-releated)
-
-        var dv = this;
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
             if (callBack) {
                 callBack.call(dv);
@@ -354,18 +388,25 @@
             dv.draggable(true);
             dv.isReady = true;
 
-            dv.bestFit();//TODO:should read last time's transform and apply them
+            var strJSON = dcmFile.serializeJSON;
+            if (strJSON) {
+                this.deSerialize(strJSON);
+            } else {
+                this.bestFit();
+            }
         });
     }
 
     dicomViewer.prototype.save = function () {
-        dicomFile.version = this.version;
-        dicomFile.windowWidth = this.windowWidth;
-        dicomFile.windowCenter = this.windowCenter;
+        var dcmFile = {};
+        dcmFile.id = this.dicomFile.id;
+        dcmFile.version = this.version;
+        dcmFile.windowWidth = this.windowWidth;
+        dcmFile.windowCenter = this.windowCenter;
         
-        dicomFile.serializeJSON = this.serialize();
+        dcmFile.serializeJSON = this.serialize();
         
-        return dicomFile;
+        return dcmFile;
     }
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
@@ -760,11 +801,14 @@
         });
     }
 
-    dicomViewer.prototype.onKeyPress = function (key) {
+    dicomViewer.prototype.onKeyUp = function (key) {
         if (!this.isReady) {
             return;
         }
-        alert(key.code);
+        console.log(key.keyCode);
+        if (key.keyCode == 46) {//user press Delete
+            this.deleteCurObject();
+        }
     }
 
     dicomViewer.prototype.onClick = function (evt) {
@@ -823,9 +867,9 @@
         var scaleValue = 1;
         if (evt.wheelDelta / 120 > 0) {
             //up
-            scaleValue = 0.9;
-        } else { //down
             scaleValue = 1.1;
+        } else { //down
+            scaleValue = 0.9;
         }
 
         var ptPrevious = this.imgLayer.getCenter();
@@ -987,6 +1031,13 @@
         }
     }
 
+    dicomViewer.prototype.deleteCurObject = function () {
+        var curObj = this.curSelectObj;
+        if (curObj) {
+            this.deleteObject(curObj);
+        }
+    }
+
     dicomViewer.prototype.deleteObject = function (obj) {
         if (obj && obj instanceof annObject) {
             obj.del();
@@ -1104,7 +1155,7 @@
         //1.annotation list
         //2.transform
         //3.window width/center => to tags
-        var str = "{'version':{0},'annObjects':{1},'transForm':{2}, 'scaleMatrix':{3}, 'rotateMatrix':{4}, 'translateMatrix':{5}}";
+        var str = '{"version":{0},"annObjects":{1},"transForm":{2}, "scaleMatrix":{3}, "rotateMatrix":{4}, "translateMatrix":{5}}';
 
         var strAnnObjs = "[";
         if (this.annotationList) {
@@ -1121,7 +1172,6 @@
 
         var transImg = this.imgLayer.transform();
 		var strTrans = JSON.stringify(transImg);
-		this._logTransformInfo();
 		
 		var strScaleMatrix = JSON.stringify(this.imgLayer.optns.scaleMatrix);
 		var strRotateMatrix = JSON.stringify(this.imgLayer.optns.rotateMatrix);
@@ -1131,16 +1181,6 @@
         return str;
     }
 
-	dicomViewer.prototype._logTransformInfo = function(){
-        var transImg = this.imgLayer.transform();
-		var strTrans = JSON.stringify(transImg);
-
-		console.info('transform:' + strTrans);
-		console.info('scaleMatrix:' + JSON.stringify(this.imgLayer.optns.scaleMatrix) );
-		console.info('rotateMatrix:' + JSON.stringify(this.imgLayer.optns.rotateMatrix) );
-		console.info('translateMatrix:' + JSON.stringify(this.imgLayer.optns.translateMatrix) );
-	}
-	
     dicomViewer.prototype.deSerialize = function (strJSON) {
         var jsonObj = (new Function("return " + strJSON))();
         if (jsonObj) {
@@ -1168,8 +1208,6 @@
 			this.imgLayer.optns.translateMatrix = translateMatrix;
 			//this.imgLayer.optns.redraw = 1;
 			this.scale(1);
-			
-			this._logTransformInfo();
 			
             annObjs.forEach(function (obj) {
                 var type = obj.type;

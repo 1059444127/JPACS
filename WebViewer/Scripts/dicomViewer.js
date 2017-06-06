@@ -6,6 +6,34 @@
  */
 (function (window, undefined) {
 
+    jQuery.fn.onPositionChanged = function (trigger, millis) {
+        if (millis == null) millis = 100;
+        var o = $(this[0]); // our jquery object
+        if (o.length < 1) return o;
+
+        var lastPos = null;
+        var lastOff = null;
+        setInterval(function () {
+            if (o == null || o.length < 1) return o; // abort if element is non existend eny more
+            if (lastPos == null) lastPos = o.position();
+            if (lastOff == null) lastOff = o.offset();
+            var newPos = o.position();
+            var newOff = o.offset();
+            if (lastPos.top != newPos.top || lastPos.left != newPos.left) {
+                $(this).trigger('onPositionChanged', { lastPos: lastPos, newPos: newPos });
+                if (typeof (trigger) == "function") trigger(lastPos, newPos);
+                lastPos = o.position();
+            }
+            if (lastOff.top != newOff.top || lastOff.left != newOff.left) {
+                $(this).trigger('onOffsetChanged', { lastOff: lastOff, newOff: newOff });
+                if (typeof (trigger) == "function") trigger(lastOff, newOff);
+                lastOff = o.offset();
+            }
+        }, millis);
+
+        return o;
+    };
+
     //define enums
     var viewContext = {
         pan: 1,
@@ -83,17 +111,17 @@
         this.value = value;
     }
 
-    dicomTag.studyTime =        { group: 0x0008, element: 0x0030 };
-    dicomTag.studyDate =        { group: 0x0008, element: 0x0020 };
-    dicomTag.patientName =      { group: 0x0010, element: 0x0010 };
+    dicomTag.studyTime = { group: 0x0008, element: 0x0030 };
+    dicomTag.studyDate = { group: 0x0008, element: 0x0020 };
+    dicomTag.patientName = { group: 0x0010, element: 0x0010 };
     dicomTag.patientBirthDate = { group: 0x0010, element: 0x0030 };
-    dicomTag.patientID =        { group: 0x0010, element: 0x0020 };
-    dicomTag.patientSex =       { group: 0x0010, element: 0x0040 };
-    dicomTag.viewPosition =     { group: 0x0018, element: 0x5101 };
-    dicomTag.bodyPart =         { group: 0x0018, element: 0x0015 };
-    dicomTag.windowWidth =      { group: 0x0028, element: 0x1051 };
-    dicomTag.windowCenter =     { group: 0x0028, element: 0x1050 };
-    dicomTag.customScale =      { group: 0x1111, element: 0x0001 };
+    dicomTag.patientID = { group: 0x0010, element: 0x0020 };
+    dicomTag.patientSex = { group: 0x0010, element: 0x0040 };
+    dicomTag.viewPosition = { group: 0x0018, element: 0x5101 };
+    dicomTag.bodyPart = { group: 0x0018, element: 0x0015 };
+    dicomTag.windowWidth = { group: 0x0028, element: 0x1051 };
+    dicomTag.windowCenter = { group: 0x0028, element: 0x1050 };
+    dicomTag.customScale = { group: 0x1111, element: 0x0001 };
 
     //define event type
     var eventType = {
@@ -296,9 +324,24 @@
 
         this.eventHandlers = {};
         this._objectIndex = 0;
-        
+    }
+
+    dicomViewer.prototype._newObjectId = function () {
+        this._objectIndex++;
+        return this.id + "_obj_" + this._objectIndex;
+    }
+
+    dicomViewer.prototype.load = function (dcmFile, callBack) {
+        this.dicomFile = dcmFile;
+        this.imgWidth = dcmFile.imgWidth;
+        this.imgHeight = dcmFile.imgHeight;
+        this.windowCenter = dcmFile.windowCenter;
+        this.windowWidth = dcmFile.windowWidth;
+        this.imgDataUrl = dcmFile.imgDataUrl;
+        this.dicomTagList = dcmFile.dicomTags;
+
         var dv = this;
-        this.canvas = document.getElementById(canvasId);
+        this.canvas = document.getElementById(dv.canvasId);
         this.canvas.oncontextmenu = function (evt) {
             dv.onContextMenu.call(dv, evt);
         };
@@ -306,7 +349,16 @@
             dv.onMouseWheel.call(dv, evt);
         };
 
+        $(this.canvas).on('keyup', function (key) {
+            dv.onKeyUp.call(dv, key);
+        });
+
         jc.start(dv.canvasId, true);
+
+        $(this.canvas).onPositionChanged(function () {
+            //console.log('canvas pos changed');
+            jc.canvas(dv.canvasId).restart();
+        });
 
         this.imgLayerId = this.id + '_imgLayer';
         this.olLayerId = this.id + '_overlayLayer';
@@ -327,32 +379,15 @@
         dv.imgLayer.click(function (arg) {
             dv.onClick.call(dv, arg)
         });
-    }
 
-    dicomViewer.prototype._newObjectId = function () {
-        this._objectIndex++;
-        return this.id + "_obj_" + this._objectIndex;
-    }
-
-    dicomViewer.prototype.load = function (dcmFile, callBack) {
-        this.dicomFile = dcmFile;
-        this.imgWidth = dcmFile.imgWidth;
-        this.imgHeight = dcmFile.imgHeight;
-        this.windowCenter = dcmFile.windowCenter;
-        this.windowWidth = dcmFile.windowWidth;
-        this.imgDataUrl = dcmFile.imgDataUrl;
-        this.dicomTagList = dcmFile.dicomTags;
-
-        var dv = this;
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
             if (callBack) {
                 callBack.call(dv);
             }
-            
+
             dv.draggable(true);
             dv.isReady = true;
 
-            //TODO: annotation list, transform form dicomFile, etc. (overlay is viewer-releated, not image-releated)
             var strJSON = dcmFile.serializeJSON;
             if (strJSON) {
                 this.deSerialize(strJSON);
@@ -368,9 +403,9 @@
         dcmFile.version = this.version;
         dcmFile.windowWidth = this.windowWidth;
         dcmFile.windowCenter = this.windowCenter;
-        
+
         dcmFile.serializeJSON = this.serialize();
-        
+
         return dcmFile;
     }
 
@@ -671,7 +706,7 @@
             }, false);
         }
 
-        var request = {'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': this.imgWidth, 'height': this.imgHeight };
+        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': this.imgWidth, 'height': this.imgHeight };
         request['pixelData'] = dv.pixelData.buffer;
         request['grayData'] = dv._imgData.buffer;
         if (this._wlWorker.isBusy) {
@@ -680,7 +715,7 @@
         } else {
             this._wlWorker.postMessage(request, [dv.pixelData.buffer, dv._imgData.buffer]);
             dv._wlWorker.isBusy = true;
-        }        
+        }
     }
 
     dicomViewer.prototype._reloadImgWithWL = function (imgData, windowWidth, windowCenter, callback) {
@@ -692,7 +727,7 @@
         if (!imgData.src) {
             imgData.src = 'mock';//in order to make JC work
         }
-        
+
         var imgId = dv.id + "_img_" + dv._newObjectId();
         jc.image(imgData).id(imgId).layer(dv.imgLayerId).down('bottom');
         dv.jcImage = jc('#' + imgId);
@@ -766,11 +801,14 @@
         });
     }
 
-    dicomViewer.prototype.onKeyPress = function (key) {
+    dicomViewer.prototype.onKeyUp = function (key) {
         if (!this.isReady) {
             return;
         }
-        alert(key.code);
+        console.log(key.keyCode);
+        if (key.keyCode == 46) {//user press Delete
+            this.deleteCurObject();
+        }
     }
 
     dicomViewer.prototype.onClick = function (evt) {
@@ -829,9 +867,9 @@
         var scaleValue = 1;
         if (evt.wheelDelta / 120 > 0) {
             //up
-            scaleValue = 0.9;
-        } else { //down
             scaleValue = 1.1;
+        } else { //down
+            scaleValue = 0.9;
         }
 
         var ptPrevious = this.imgLayer.getCenter();
@@ -993,6 +1031,13 @@
         }
     }
 
+    dicomViewer.prototype.deleteCurObject = function () {
+        var curObj = this.curSelectObj;
+        if (curObj) {
+            this.deleteObject(curObj);
+        }
+    }
+
     dicomViewer.prototype.deleteObject = function (obj) {
         if (obj && obj instanceof annObject) {
             obj.del();
@@ -1068,7 +1113,7 @@
 
     dicomViewer.prototype.reset = function (value) {
         this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
-        this.updateTag(dicomTag.customScale, Math.round(this.getScale()*100)/100);
+        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
 
         //adjust objects' size
         this.annotationList.forEach(function (obj) {
@@ -1126,11 +1171,11 @@
         strAnnObjs += "]";
 
         var transImg = this.imgLayer.transform();
-		var strTrans = JSON.stringify(transImg);
-		
-		var strScaleMatrix = JSON.stringify(this.imgLayer.optns.scaleMatrix);
-		var strRotateMatrix = JSON.stringify(this.imgLayer.optns.rotateMatrix);
-		var strTranslateMatrix = JSON.stringify(this.imgLayer.optns.translateMatrix);
+        var strTrans = JSON.stringify(transImg);
+
+        var strScaleMatrix = JSON.stringify(this.imgLayer.optns.scaleMatrix);
+        var strRotateMatrix = JSON.stringify(this.imgLayer.optns.rotateMatrix);
+        var strTranslateMatrix = JSON.stringify(this.imgLayer.optns.translateMatrix);
 
         str = str.format(this.version, strAnnObjs, strTrans, strScaleMatrix, strRotateMatrix, strTranslateMatrix);
         return str;
@@ -1143,27 +1188,27 @@
             var version = jsonObj.version;
             var annObjs = jsonObj.annObjects;
             var trans = jsonObj.transForm;
-			var scaleMatrix = jsonObj.scaleMatrix;
-			var rotateMatrix = jsonObj.rotateMatrix;
-			var translateMatrix = jsonObj.translateMatrix;
-			
-			var trans11 = trans[0][0],//x scale
+            var scaleMatrix = jsonObj.scaleMatrix;
+            var rotateMatrix = jsonObj.rotateMatrix;
+            var translateMatrix = jsonObj.translateMatrix;
+
+            var trans11 = trans[0][0],//x scale
 				trans21 = trans[0][1],//x rotate
 				transdx = trans[0][2],
 				trans12 = trans[1][0],//y rotate
 				trans22 = trans[1][1],//y scale
 				transdy = trans[1][2];
-			
+
             //this.imgLayer.transform(trans11, trans12, trans21, trans22, transdx, transdy, true);
 
-			this.imgLayer.transform(1,0,0,1,0,0, true);
+            this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
 
-			this.imgLayer.optns.scaleMatrix = scaleMatrix;
-			this.imgLayer.optns.rotateMatrix = rotateMatrix;
-			this.imgLayer.optns.translateMatrix = translateMatrix;
-			//this.imgLayer.optns.redraw = 1;
-			this.scale(1);
-			
+            this.imgLayer.optns.scaleMatrix = scaleMatrix;
+            this.imgLayer.optns.rotateMatrix = rotateMatrix;
+            this.imgLayer.optns.translateMatrix = translateMatrix;
+            //this.imgLayer.optns.redraw = 1;
+            this.scale(1);
+
             annObjs.forEach(function (obj) {
                 var type = obj.type;
                 switch (type) {
@@ -1198,7 +1243,7 @@
         this.isInEdit = false;
         this.isCreated = false;
     }
-    
+
     //set child jcObject's common mouse event hander, etc.
     annObject.prototype._setChildMouseEvent = function (jcObj, overStyle) {
         var dv = this.parent;
@@ -1228,14 +1273,14 @@
     }
 
     annObject.prototype._setChildDraggable = function (jcObj, draggable, onDrag) {
-        if(!jcObj){
-        	return;
+        if (!jcObj) {
+            return;
         }
-        
+
         var dv = this.parent;
         var annObj = this;
         //var transTmp = dv.imgLayer.transform();
-		
+
         jcObj.draggable({
             disabled: !draggable,
             start: function (arg) {
@@ -1247,7 +1292,7 @@
             drag: function (arg) {
                 //ptImg is mouse position, not the object's start position
                 //don't translate any annObject, always keep annObject's transform is clear.
-				var transTmp = dv.imgLayer.transform();
+                var transTmp = dv.imgLayer.transform();
                 var ptImg = screenToImage(arg, transTmp);
 
                 if (typeof (this._lastPos.x) != 'undefined') {
