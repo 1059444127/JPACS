@@ -36,10 +36,12 @@
 
     //define enums
     var viewContext = {
-        pan: 1,
-        select: 2,
-        create: 3
+        select: 1,
+        pan: 2,
+        wl: 3,
+        create: 4
     };
+
     var stepEnum = {
         step1: 1,
         step2: 2,
@@ -456,7 +458,7 @@
             if (dv._imgDataRequest.length > 0) {
                 var req = dv._imgDataRequest.pop();
 
-                console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
+                //console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
                 dv._requestJpgImg(req);
                 dv._imgDataRequest = [];
             }
@@ -908,20 +910,55 @@
     }
 
     dicomViewer.prototype.draggable = function (draggable) {
-
         var dv = this;
         var canvas = this.canvas;
 
         this.imgLayer.draggable({
             disabled: !draggable,
-            drag: dv.onDragImage ? dv.onDragImage : function (arg) { },
             start: function (arg) {
+                this._lastPos = {};
+                this._startWL = {};
+                this._startWL.width = dv.windowWidth;
+                this._startWL.center = dv.windowCenter;
                 canvas.style.cursor = "move";
             },
             stop: function (arg) {
+                this.lastPos = {};
+                this._startWL = {};
                 canvas.style.cursor = "default";
+            },
+            drag: function (arg) {
+                if (dv.curContext == viewContext.wl) {
+                    var transTmp = dv.imgLayer.transform();
+                    var ptImg = screenToImage(arg, transTmp);
+
+                    if (typeof (this._lastPos.x) != 'undefined') {
+                        var deltaX = ptImg.x - this._lastPos.x;
+                        var deltaY = ptImg.y - this._lastPos.y;
+                        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                            deltaY = 0;
+                        } else {
+                            deltaX = 0;
+                        }
+                        //console.log('deltaX: ' + deltaX + ',deltaY: ' + deltaY);
+                        this._startWL.width = Math.round(this._startWL.width + deltaX);
+                        this._startWL.center = Math.round(this._startWL.center + deltaY);
+                        dv.adjustWL(this._startWL.width, this._startWL.center);
+                    }
+
+                    this._lastPos = {
+                        x: ptImg.x,
+                        y: ptImg.y
+                    };
+
+                    return true;
+                }
             }
         });
+    }
+
+    dicomViewer.prototype.setWLModel = function () {
+        this.setContext(viewContext.wl);
     }
 
     dicomViewer.prototype.setPanModel = function () {
@@ -936,7 +973,7 @@
         var lastContext = this.curContext;
 
         if (lastContext !== ctx) {
-            var draggable = (ctx == viewContext.pan) || (ctx == viewContext.sele && this.curSelectObj == null);
+            var draggable = (ctx == viewContext.pan) || (ctx == viewContext.wl) || (ctx == viewContext.select && this.curSelectObj == null);
             this.draggable(draggable);
 
             this.curContext = ctx;

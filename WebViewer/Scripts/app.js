@@ -62,6 +62,10 @@ window.onload = function () {
         curViewer.rotate(30);
     });
 
+    $('#btnWL').on('click', function () {
+        curViewer.setWLModel();
+    });
+
     $('#btnReset').on('click', function () {
         curViewer.reset();
     });
