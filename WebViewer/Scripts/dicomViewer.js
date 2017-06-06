@@ -929,12 +929,9 @@
             },
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
-                    var transTmp = dv.imgLayer.transform();
-                    var ptImg = screenToImage(arg, transTmp);
-
                     if (typeof (this._lastPos.x) != 'undefined') {
-                        var deltaX = ptImg.x - this._lastPos.x;
-                        var deltaY = ptImg.y - this._lastPos.y;
+                        var deltaX = arg.x - this._lastPos.x;
+                        var deltaY = arg.y - this._lastPos.y;
                         if (Math.abs(deltaX) > Math.abs(deltaY)) {
                             deltaY = 0;
                         } else {
@@ -947,8 +944,8 @@
                     }
 
                     this._lastPos = {
-                        x: ptImg.x,
-                        y: ptImg.y
+                        x: arg.x,
+                        y: arg.y
                     };
 
                     return true;
