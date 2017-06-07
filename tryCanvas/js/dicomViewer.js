@@ -413,10 +413,6 @@
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
         var dv = this;
-        if (!this._imgData) {//used to accept the image data
-            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
-        }
-
         dv._adjustWLCallback = callback;
 
         if (this.localWL) {
@@ -494,6 +490,9 @@
     //with worker
     dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
         var dv = this;
+        if (!this._imgData) {//used to accept the image data
+            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
+        }
         var worker = this._imgDataWorker;
         if (!this._imgDataWorker) {
             var workerJs;
@@ -941,9 +940,12 @@
                             deltaX = 0;
                         }
                         //console.log('deltaX: ' + deltaX + ',deltaY: ' + deltaY);
-                        this._startWL.width = Math.round(this._startWL.width + deltaX);
-                        this._startWL.center = Math.round(this._startWL.center + deltaY);
-                        dv.adjustWL(this._startWL.width, this._startWL.center);
+                        if(deltaX != 0 || deltaY != 0){
+	                        this._startWL.width = Math.round(this._startWL.width + deltaX);
+                        	this._startWL.center = Math.round(this._startWL.center + deltaY);
+                        
+                        	dv.adjustWL(this._startWL.width, this._startWL.center);
+                        }
                     }
 
                     this._lastPos = {
