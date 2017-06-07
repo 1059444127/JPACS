@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQLDBHelper", "SQLDBHelper\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSCUTest", "SSCUTest\SSCUTest.csproj", "{C512A17C-8C11-41E6-B4CA-D932FF1F2D65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WSServerForm", "WSServerForm\WSServerForm.csproj", "{3745BA45-5020-4A05-8AD0-1ED94DDD8E2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{C512A17C-8C11-41E6-B4CA-D932FF1F2D65}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C512A17C-8C11-41E6-B4CA-D932FF1F2D65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C512A17C-8C11-41E6-B4CA-D932FF1F2D65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3745BA45-5020-4A05-8AD0-1ED94DDD8E2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3745BA45-5020-4A05-8AD0-1ED94DDD8E2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3745BA45-5020-4A05-8AD0-1ED94DDD8E2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3745BA45-5020-4A05-8AD0-1ED94DDD8E2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

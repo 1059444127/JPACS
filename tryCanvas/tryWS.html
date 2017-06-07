@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+	<head>
+		<title>WebSocket Chat</title>
+		<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+		<style>
+			#c1{
+				background-color: aliceblue;
+			}
+		</style>
+		<script type="text/javascript">
+			var ws;
+			$().ready(function() {
+				
+				$("#btnConnect").click(function() {
+					$("#spanStatus").text("connecting");
+					ws = new WebSocket("ws://localhost:8181");
+					//ws.binaryType = "arraybuffer";
+					
+					ws.onopen = function() {
+						$("#spanStatus").text("connected");
+					};
+					
+					ws.onmessage = function(evt) {
+						//$("#spanStatus").text(evt.data);
+						/*mehotd 1
+						var imageWidth = 400, imageHeight = 400; // hardcoded width & height. 
+						var byteArray = new Uint8Array(evt.data);
+						 
+						var canvas = document.getElementById('c1');
+						//canvas.height = imageWidth;
+						//canvas.width = imageHeight;
+						var ctx = canvas.getContext('2d');
+						 
+						var imageData = ctx.getImageData(0, 0, imageWidth, imageHeight); // total size: imageWidth * imageHeight * 4; color format BGRA
+						//imageData.data.set(byteArray);
+						
+						var dataLen = imageData.data.length;
+						for (var i = 0; i < dataLen; i++)
+						{
+						    imageData.data[i] = byteArray[i];
+						}
+						ctx.putImageData(imageData, 0, 0);
+						 */
+						
+//						 var bytes = new Uint8Array(evt.data);
+//						var binary= "";
+//						var len = bytes.byteLength;
+//						for (var i = 0; i < len; i++) {
+//						binary += String.fromCharCode( bytes[ i ] )
+//						}
+						//console.log(window.btoa( binary ));
+							var canvas = document.getElementById('c1');
+							var ctx = canvas.getContext('2d');
+							ctx.clearRect(0,0,400,400);
+							
+							
+							
+						var img = new Image();
+						img.onload = function(){
+						
+							
+							ctx.drawImage(img,0, 0);
+							console.log(new Date().toLocaleTimeString(), 'finish load image');
+						}
+						//img.src = "data:image/png;base64,"+window.btoa( binary );
+						img.src = evt.data;
+						
+						
+						// create a new element and add it to div
+//						var image = document.createElement('img');
+//						image.width = imageWidth;
+//						image.height = imageHeight;
+//						image.src = canvas.toDataURL();
+//						 
+//						var div = document.getElementById('img');
+//						div.appendChild(image)
+					};
+					
+					ws.onerror = function(evt) {
+						$("#spanStatus").text(evt.message);
+					};
+					
+					ws.onclose = function() {
+						$("#spanStatus").text("disconnected");
+					};
+				});
+				
+				$("#btnSend").click(function() {
+					if(ws.readyState == WebSocket.OPEN) {
+						ws.send($("#textInput").val());
+						console.log(new Date().toLocaleTimeString(), 'start load image');
+					} else {
+						$("#spanStatus").text("Connection is closed");
+					}
+				});
+				
+				$("#btnDisconnect").click(function() {
+					ws.close();
+				});
+			});
+		</script>
+	</head>
+
+	<body>
+		<input type="button" value="Connect" id="btnConnect" />
+		<input type="button" value="Disconnect" id="btnDisconnect" /><br />
+		<input type="text" id="textInput" />
+		<input type="button" value="Send" id="btnSend" /><br />
+		<span id="spanStatus">(display)</span>
+		
+		<div>
+			<canvas id="c1" width="400" height="400"></canvas>
+		</div>
+		<div>
+			<img src="#" id='myimg' />
+		</div>
+	</body>
+
+</html>

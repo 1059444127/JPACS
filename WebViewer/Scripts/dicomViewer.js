@@ -413,10 +413,6 @@
 
     dicomViewer.prototype.adjustWL = function (windowWidth, windowCenter, callback) {
         var dv = this;
-        if (!this._imgData) {//used to accept the image data
-            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
-        }
-
         dv._adjustWLCallback = callback;
 
         if (this.localWL) {
@@ -494,6 +490,9 @@
     //with worker
     dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
         var dv = this;
+        if (!this._imgData) {//used to accept the image data
+            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
+        }
         var worker = this._imgDataWorker;
         if (!this._imgDataWorker) {
             var workerJs;
@@ -929,23 +928,29 @@
             },
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
+                    var transTmp = dv.imgLayer.transform();
+                    var ptImg = screenToImage(arg, transTmp);
+
                     if (typeof (this._lastPos.x) != 'undefined') {
-                        var deltaX = arg.x - this._lastPos.x;
-                        var deltaY = arg.y - this._lastPos.y;
+                        var deltaX = ptImg.x - this._lastPos.x;
+                        var deltaY = ptImg.y - this._lastPos.y;
                         if (Math.abs(deltaX) > Math.abs(deltaY)) {
                             deltaY = 0;
                         } else {
                             deltaX = 0;
                         }
                         //console.log('deltaX: ' + deltaX + ',deltaY: ' + deltaY);
-                        this._startWL.width = Math.round(this._startWL.width + deltaX);
-                        this._startWL.center = Math.round(this._startWL.center + deltaY);
-                        dv.adjustWL(this._startWL.width, this._startWL.center);
+                        if (deltaX != 0 || deltaY != 0) {
+                            this._startWL.width = Math.round(this._startWL.width + deltaX);
+                            this._startWL.center = Math.round(this._startWL.center + deltaY);
+
+                            dv.adjustWL(this._startWL.width, this._startWL.center);
+                        }
                     }
 
                     this._lastPos = {
-                        x: arg.x,
-                        y: arg.y
+                        x: ptImg.x,
+                        y: ptImg.y
                     };
 
                     return true;
