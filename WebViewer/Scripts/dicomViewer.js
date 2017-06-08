@@ -442,10 +442,12 @@
         console.log(new Date().toLocaleTimeString() + ': start request image file,' + request.windowWidth + ',' + request.windowCenter);
 
         var imgDataUrl = dv.imgDataUrl;
+        
         imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
 
         var img = new Image();
         img.onload = function () {
+            console.timeEnd('getandloadImage');
             dv._reloadImgWithWL(img, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
 
             console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
@@ -459,7 +461,7 @@
                 dv._imgDataRequest = [];
             }
         }
-
+        console.time('getandloadImage');
         img.src = imgDataUrl;
     }
 
@@ -928,9 +930,9 @@
             },
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
-                    var transTmp = dv.imgLayer.transform();
-                    var ptImg = screenToImage(arg, transTmp);
-
+                    //var transTmp = dv.imgLayer.transform();
+                    //var ptImg = screenToImage(arg, transTmp);
+                    var ptImg = arg;
                     if (typeof (this._lastPos.x) != 'undefined') {
                         var deltaX = ptImg.x - this._lastPos.x;
                         var deltaY = ptImg.y - this._lastPos.y;

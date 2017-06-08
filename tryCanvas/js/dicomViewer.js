@@ -928,9 +928,9 @@
             },
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
-                    var transTmp = dv.imgLayer.transform();
-                    var ptImg = screenToImage(arg, transTmp);
-
+                    //var transTmp = dv.imgLayer.transform();
+                    //var ptImg = screenToImage(arg, transTmp);
+					var ptImg = arg;
                     if (typeof (this._lastPos.x) != 'undefined') {
                         var deltaX = ptImg.x - this._lastPos.x;
                         var deltaY = ptImg.y - this._lastPos.y;

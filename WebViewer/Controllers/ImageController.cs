@@ -38,6 +38,12 @@ namespace WebPACS.Controllers
 
     public class ImageController : Controller
     {
+        private string timeLog()
+        {
+            DateTime dt = DateTime.Now;
+            return string.Format("{0}:{1}:{2} {3}", dt.Hour, dt.Minute, dt.Second, dt.Millisecond);
+        }
+
         public static object GetCache(string CacheKey)
         {
             System.Web.Caching.Cache objCache = HttpRuntime.Cache;
@@ -193,6 +199,7 @@ namespace WebPACS.Controllers
         {
             try
             {
+
                 DicomImage dcmImage = GetDicomImage(id);
 
                 double originCenter = dcmImage.WindowCenter;
@@ -203,9 +210,11 @@ namespace WebPACS.Controllers
 
                 GC.Collect();
 
+                Console.WriteLine(timeLog() + " start generate PNG image");
+
                 MemoryStream stream = new MemoryStream();
                 dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-
+                Console.WriteLine(timeLog() + " end generate PNG image");
 
                 dcmImage.WindowCenter = originCenter;
                 dcmImage.WindowWidth = originWidth;

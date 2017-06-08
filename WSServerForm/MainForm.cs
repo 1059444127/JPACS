@@ -51,17 +51,20 @@ namespace WSServerForm
                 };
                 socket.OnMessage = message =>
                 {
-                    Console.WriteLine(DateTime.Now.ToLongTimeString() + " start load image data");
+                    Console.WriteLine(timeLog() + " start load image data");
 
-                    byte[] imgData = GetImageData(1, 4098, 2046);
-                    String strImg = "data:image/png;base64," + Convert.ToBase64String(imgData);
-
-                    //_clientSockets.ToList().ForEach(s => s.Send(strImg));
+                    String strImg = GetImageData(1, 4098, 2046);
                     socket.Send(strImg);
 
-                    Console.WriteLine(DateTime.Now.ToLongTimeString() + " finish load image data");
+                    Console.WriteLine(timeLog() + " finish load image data");
                 };
             });
+        }
+
+        private string timeLog()
+        {
+            DateTime dt = DateTime.Now;
+            return string.Format("{0}:{1}:{2} {3}", dt.Hour, dt.Minute, dt.Second, dt.Millisecond); 
         }
 
         public object GetCache(string CacheKey)
@@ -95,7 +98,7 @@ namespace WSServerForm
             return dcmImage;
         }
 
-        private byte[] GetImageData(int imgId, int windowWidth, int windowCenter)
+        private string GetImageData(int imgId, int windowWidth, int windowCenter)
         {
             DicomImage dcmImage = GetDicomImage(imgId);
 
@@ -110,44 +113,22 @@ namespace WSServerForm
 
             GC.Collect();
 
-            
-             //method 2, send buffer,and conver to base64 string
-            byte[] result;
+            string strResult = string.Empty;
+
             using (System.IO.MemoryStream stream = new System.IO.MemoryStream())
             {
-                /*method 1, send bmp
-                dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Bmp);
-                */
+                Console.WriteLine(timeLog() + " start generate PNG image");
                 dcmImage.RenderImage().AsBitmap().Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-                result = stream.GetBuffer();
+                Console.WriteLine(timeLog() + " finish generate PNG image");
+                Console.WriteLine(timeLog() + " start base64 string");
+                strResult = "data:image/png;base64," + Convert.ToBase64String(stream.GetBuffer());
+                Console.WriteLine(timeLog() + " finish base64 string");
             }
 
             dcmImage.WindowCenter = originCenter;
             dcmImage.WindowWidth = originWidth;
 
-            /*method 1 send img
-            int iRealLen = result.Length - 54;
-            byte[] image = new byte[iRealLen];
-            int iIndex = 0;
-            int iRowIndex = 0;
-            int iWidth = width * 4;
-            for (int i = height - 1; i >= 0; --i)
-            {
-                iRowIndex = i * iWidth;
-                for (int j = 0; j < iWidth; j += 4)
-                {
-                    // RGB to BGR
-                    image[iIndex++] = result[iRowIndex + j + 2 + 54]; // B
-                    image[iIndex++] = result[iRowIndex + j + 1 + 54]; // G
-                    image[iIndex++] = result[iRowIndex + j + 54];     // R
-                    image[iIndex++] = result[iRowIndex + j + 3 + 54]; // A
-                }
-            }
-
-            return image;
-            */
-
-            return result;
+            return strResult;
         }
     }
 }
