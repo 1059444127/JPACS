@@ -3,8 +3,8 @@
 	<head>
 		<meta charset="UTF-8">
 		<title></title>
-		<script type="text/javascript" src="js/jquery-3.2.1.min.js" ></script>
-		<script type="text/javascript" src="js/jCanvaScript.1.5.18.js" ></script>
+		<script type="text/javascript" src="js/jquery-3.2.1.js" ></script>
+		<script type="text/javascript" src="js/jCanvaScript.js" ></script>
 		<script type="text/javascript" src="js/dicomViewer.js" ></script>
 		<style>
 			canvas{
@@ -36,7 +36,17 @@
 				var imgDataUrl = 'http://localhost/jpacs' + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
     			dcmFile.imgDataUrl = imgDataUrl;
 				
+			    if (!window.location.origin) {
+			        window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+			    }
+			    var baseUrl = window.location.origin;
+			    if (!window.location.pathname.startsWith('/Image')) {
+			        baseUrl += '/' + location.pathname.split('/')[1];
+			    }
+				
 				var v1 = new dicomViewer('c1');
+				v1.cursorUrl = baseUrl +"/img";
+				
 			    v1.load(dcmFile, function () {
 			        console.log('success load image!');
 			

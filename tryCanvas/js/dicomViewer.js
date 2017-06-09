@@ -2,9 +2,11 @@
  * Depends:
  * 1. jCanvasScript
  * 2. jQuery
- * 
+ * 3. require.js
  */
-(function (window, undefined) {
+
+
+define(['jquery', 'jCanvaScript'], function (jQuery, jc) {
 
     jQuery.fn.onPositionChanged = function (trigger, millis) {
         if (millis == null) millis = 100;
@@ -258,11 +260,13 @@
         var fontSize = overlaySetting.fontSize;
         var v1 = Math.floor(this.position / 4);//0,1,2,3
         var v2 = this.position % 4;//0,1,2,3
-
+		var align ='left';
+		
         if (v1 % 2 == 0) {//left
             this.ptStart.x = 5;
         } else {
-            this.ptStart.x = viewer.canvas.width - 150;
+        	align = 'right';
+            this.ptStart.x = viewer.canvas.width - 10;
         }
 
         if (v1 < 2) {//top
@@ -273,7 +277,7 @@
 
         var idLbl = this.id + "_ol";
         var font = "{0}px {1}".format(overlaySetting.fontSize, overlaySetting.font);
-        jc.text(this.prefix, this.ptStart.x, this.ptStart.y).id(idLbl).layer(viewer.olLayerId).color(colors.white).font(font);
+        jc.text(this.prefix, this.ptStart.x, this.ptStart.y).id(idLbl).layer(viewer.olLayerId).color(colors.white).font(font).align(align);
         this.label = jc('#' + idLbl);
 
         this.isCreated = true;
@@ -321,11 +325,12 @@
         this.dicomTagList = [];
 
         this.isReady = false;
-        this.curContext = viewContext.pan;
         this.curSelectObj = undefined;
 
         this.eventHandlers = {};
         this._objectIndex = 0;
+        
+        this.cursorUrl = "";
     }
 
     dicomViewer.prototype._newObjectId = function () {
@@ -382,6 +387,8 @@
             dv.onClick.call(dv, arg)
         });
 
+		this.setContext(viewContext.pan);
+		
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
             if (callBack) {
                 callBack.call(dv);
@@ -851,6 +858,7 @@
         if (!this.isReady) {
             return;
         }
+        
         this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
     }
 
@@ -872,7 +880,10 @@
         } else { //down
             scaleValue = 0.9;
         }
-
+		
+		var log= "x:{0},y:{1}".format(evt.offsetX, evt.offsetY);
+		console.log(log);
+		
         var ptPrevious = this.imgLayer.getCenter();
         this.imgLayer.scale(scaleValue);
         var ptNow = this.imgLayer.getCenter();
@@ -915,21 +926,15 @@
         this.imgLayer.draggable({
             disabled: !draggable,
             start: function (arg) {
-                this._lastPos = {};
-                this._startWL = {};
-                this._startWL.width = dv.windowWidth;
-                this._startWL.center = dv.windowCenter;
-                canvas.style.cursor = "move";
+                this._lastPos = {x: arg.x, y: arg.y};
+                this._startWL = {width: dv.windowWidth, center: dv.windowCenter};
+                
+                if(dv.curContext == viewContext.select || dv.curContext == viewContext.create){
+                	canvas.style.cursor = 'move';
+                }
             },
             stop: function (arg) {
-                this.lastPos = {};
-                this._startWL = {};
-                canvas.style.cursor = "default";
-            },
-            drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
-                    //var transTmp = dv.imgLayer.transform();
-                    //var ptImg = screenToImage(arg, transTmp);
 					var ptImg = arg;
                     if (typeof (this._lastPos.x) != 'undefined') {
                         var deltaX = ptImg.x - this._lastPos.x;
@@ -952,7 +957,15 @@
                         x: ptImg.x,
                         y: ptImg.y
                     };
-
+                }else if(dv.curContext == viewContext.select || dv.curContext == viewContext.create){
+                	canvas.style.cursor = 'auto';
+                }
+                
+                this.lastPos = {};
+                this._startWL = {};
+            },
+            drag: function (arg) {
+                if (dv.curContext == viewContext.wl) {
                     return true;
                 }
             }
@@ -980,6 +993,18 @@
 
             this.curContext = ctx;
             this.selectObject(undefined);
+        }
+        
+        var canvas = this.canvas;
+        if(this.curContext == viewContext.wl){
+        	var u = this.cursorUrl + '/adjustwl.cur';
+ 		   	canvas.style.cursor = "url('{0}'),move".format(u);
+        }else if(this.curContext == viewContext.pan){
+        	canvas.style.cursor = "move";
+        }else if(this.curContext == viewContext.select){
+        	canvas.style.cursor = "default";
+        }else if(this.curContext == viewContext.create){
+        	canvas.style.cursor = "default";
         }
     }
 
@@ -1123,7 +1148,7 @@
         if (obj && obj.isCreated) {
             //finish create
             this.annotationList.push(obj);
-            this.curContext = viewContext.select;
+            this.setContext(viewContext.select);
             this.selectObject(obj);
         }
     }
@@ -1284,22 +1309,22 @@
     }
 
     //set child jcObject's common mouse event hander, etc.
-    annObject.prototype._setChildMouseEvent = function (jcObj, overStyle) {
+    annObject.prototype._setChildMouseEvent = function (jcObj) {
         var dv = this.parent;
         var annObj = this;
 
-        if (!overStyle) {
-            overStyle = 'pointer';
-        }
-
         jcObj.mouseover(function (arg) {
-            if (dv.curContext == viewContext.select)
-                dv.canvas.style.cursor = overStyle;
+            if (dv.curContext == viewContext.select){
+            	if (!this.mouseStyle) {
+		            this.mouseStyle = 'pointer';
+		        }
+            	dv.canvas.style.cursor = this.mouseStyle;
+            }   
         });
 
         jcObj.mouseout(function () {
             if (dv.curContext == viewContext.select)
-                dv.canvas.style.cursor = 'default';
+                dv.canvas.style.cursor = 'auto';
         });
 
         jcObj.mousedown(function (arg) {
@@ -1317,16 +1342,22 @@
         }
 
         var dv = this.parent;
+        var canvas = dv.canvas;
         var annObj = this;
-        //var transTmp = dv.imgLayer.transform();
 
         jcObj.draggable({
             disabled: !draggable,
             start: function (arg) {
                 this._lastPos = {};
+                if(this.mouseStyle){
+                	dv.canvas.style.cursor = this.mouseStyle;
+                }
             },
             stop: function (arg) {
                 this._lastPos = {};
+                if(this.mouseStyle){
+                	dv.canvas.style.cursor = 'auto';
+                }
             },
             drag: function (arg) {
                 //ptImg is mouse position, not the object's start position
@@ -1522,7 +1553,8 @@
                 jc.circle(this.ptStart.x, this.ptStart.y, 5).id(idCircleA).layer(dv.imgLayerId).color(colors.white);
                 this.circleA = jc("#" + idCircleA);
 
-                this._setChildMouseEvent(this.circleA, 'crosshair');
+				this.circleA.mouseStyle = 'crosshair';
+                this._setChildMouseEvent(this.circleA);
             }
 
             if (!this.label) {
@@ -1795,10 +1827,11 @@
             this.arrow = new annArrow(this.parent);
 
             this.reDraw();
-
-            this._setChildMouseEvent(this.circleStart, 'crosshair');
-            this._setChildMouseEvent(this.circleEnd, 'crosshair');
-            this._setChildMouseEvent(this.circleMiddle, 'crosshair');
+			
+			this.circleStart.mouseStyle = this.circleEnd.mouseStyle = this.circleMiddle.mouseStyle = 'crosshair';
+            this._setChildMouseEvent(this.circleStart);
+            this._setChildMouseEvent(this.circleEnd);
+            this._setChildMouseEvent(this.circleMiddle);
             this._setChildMouseEvent(this.label);
 
             this.isCreated = true;
@@ -1988,9 +2021,12 @@
     }
 
     //export definitiens
-    window.dicomViewer = dicomViewer;
+    //window.dicomViewer = dicomViewer;
     window.dicomTag = dicomTag;
     window.dicomFile = dicomFile;
     window.overlayPos = overlayPos;
-
-})(window, undefined);
+	
+	//reuqire js moudle
+	return dicomViewer;
+	
+});

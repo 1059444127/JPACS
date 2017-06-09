@@ -1,5 +1,5 @@
 
-window.onload = function () {
+require(['jquery','dicomViewer'], function($, dicomViewer){
     var serializedString = undefined;
 
     if (!window.location.origin) {
@@ -15,6 +15,8 @@ window.onload = function () {
 
     //var v1 = new dicomViewer('idCanvas', true);
     var v1 = new dicomViewer('idCanvas');
+    v1.cursorUrl = baseUrl + "/img";
+
     v1.load(dcmFile, function () {
         console.log('success load image!');
 
@@ -71,7 +73,7 @@ window.onload = function () {
     });
 
     $('#btnDelete').on('click', function () {
-        curViewer.deleteCurObject(curObj);
+        curViewer.deleteCurObject();
     });
 
     $('#btnSave').on('click', function () {
@@ -130,4 +132,5 @@ window.onload = function () {
         curWindowCenter += 100;
         adjustWL(curWindowWidth, curWindowCenter);
     });
-}
+});
+

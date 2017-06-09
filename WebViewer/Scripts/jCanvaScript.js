@@ -4,6 +4,10 @@
  *
  * Copyright 2012, Alexander Savin
  * Dual licensed under the MIT or GPL Version 2 licenses.
+ * 
+ * ---John Hu Adjusted version
+ * 1. adjust drag logic, support custom drag.
+ * 2. support module define.
  */
 (function (window, undefined) {
     var canvases = [],
@@ -3457,6 +3461,12 @@ jCanvaScript.layer=function(idLayer)
 				return layersArray[j];
 	}
 	return layers(idLayer);
+}
+
+if ( typeof define === "function" && define.amd ) {
+    define( "jCanvaScript", [], function() {
+        return jCanvaScript;
+    } );
 }
 
 

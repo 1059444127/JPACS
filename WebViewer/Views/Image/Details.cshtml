@@ -45,13 +45,14 @@
     <div id="custom-handle" class="ui-slider-handle"></div>
 </div>
 
+<script type="text/javascript" src="~/Scripts/require.js" data-main="/scripts/app.js" defer async="true"></script>
 
-@section Scripts {
+@*@section Scripts {
     @Scripts.Render("~/scripts/wlWorker.js")
     @Scripts.Render("~/scripts/imgDataWorker.js")
     @Scripts.Render("~/scripts/dicomViewer.js")
     @Scripts.Render("~/scripts/app.js")
-}
+}*@
 
 <script>
     var dcmFile = {};

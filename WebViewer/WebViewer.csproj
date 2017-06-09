@@ -220,6 +220,7 @@
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="img\adjustwl.cur" />
     <Content Include="Scripts\ai.0.22.9-build00167.js" />
     <Content Include="Scripts\ai.0.22.9-build00167.min.js" />
     <Content Include="Scripts\app.js" />
@@ -232,6 +233,9 @@
     <None Include="Properties\PublishProfiles\Profile1.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\dicomViewer.js" />
+    <Content Include="Scripts\jCanvaScript.js" />
+    <Content Include="Scripts\jquery.js" />
+    <Content Include="Scripts\require.js" />
     <Content Include="Scripts\wlWorker.js" />
     <Content Include="Scripts\imgDataWorker.js" />
     <Content Include="Scripts\jCanvaScript.1.5.18.js" />
