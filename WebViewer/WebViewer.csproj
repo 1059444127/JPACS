@@ -232,11 +232,12 @@
     <None Include="Properties\PublishProfiles\png.pubxml" />
     <None Include="Properties\PublishProfiles\Profile1.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
-    <Content Include="Scripts\dicomViewer.js" />
-    <Content Include="Scripts\jCanvaScript.js" />
-    <Content Include="Scripts\jquery.js" />
-    <Content Include="Scripts\require.js" />
-    <Content Include="Scripts\wlWorker.js" />
+    <Content Include="Scripts\dicom\dicomViewer.js" />
+    <Content Include="Scripts\lib\domReady.js" />
+    <Content Include="Scripts\lib\jCanvaScript.js" />
+    <Content Include="Scripts\lib\jquery.js" />
+    <Content Include="Scripts\lib\require.js" />
+    <Content Include="Scripts\dicom\wlWorker.js" />
     <Content Include="Scripts\imgDataWorker.js" />
     <Content Include="Scripts\jCanvaScript.1.5.18.js" />
     <Content Include="Scripts\jquery-1.10.2.js" />

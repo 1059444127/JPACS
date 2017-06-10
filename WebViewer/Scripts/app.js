@@ -1,4 +1,13 @@
 
+require.config({
+    baseUrl: "../../Scripts",
+    paths: {
+        "jquery": "lib/jquery",
+        "jCanvaScript": "lib/jCanvaScript",
+        "dicomViewer": "dicom/dicomViewer"
+    }
+});
+
 require(['jquery','dicomViewer'], function($, dicomViewer){
     var serializedString = undefined;
 
