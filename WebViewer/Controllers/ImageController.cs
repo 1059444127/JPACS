@@ -238,6 +238,8 @@ namespace WebPACS.Controllers
                 Image image = images.First<Image>(i => i.Id == id);
 
                 DicomImage dcmImage = GetDicomImage(id);
+                dcmImage.WindowCenter = model.WindowCenter;
+                dcmImage.WindowWidth = model.WindowWidth;
 
                 DicomFile dcmFile = new DicomFile(dcmImage.Dataset);
                 dcmFile.Dataset.AddOrUpdate<string>(DicomTag.WindowWidth, model.WindowWidth.ToString());

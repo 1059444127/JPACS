@@ -265,15 +265,15 @@ function (dicom, annArrow, annObject, jc) {
     }
 
     annLine.prototype.serialize = function () {
-        var result = "{type: {4},ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}";
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y), this.type);
+        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}';
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y),"annLine");
 
         return result;
     }
 
     annLine.prototype.deSerialize = function (jsonObj) {
         if (jsonObj) {
-            this.startCreate();
+            this.startCreate(this.parent);
             var ptStart = jsonObj.ptStart;
             this.onClick(ptStart);
             var ptEnd = jsonObj.ptEnd;

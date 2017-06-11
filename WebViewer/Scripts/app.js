@@ -4,12 +4,15 @@ require.config({
     paths: {
         "jquery": "lib/jquery",
         "jCanvaScript": "lib/jCanvaScript",
-        "dicomViewer": "dicom/dicomViewer"
+        "dicomViewer": "dicom/dicomViewer",
+        "dicomUtil": "dicom/dicomUtil"
     }
 });
 
-require(['jquery','dicomViewer'], function($, dicomViewer){
-    var serializedString = undefined;
+require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom) {
+
+    var dicomTag = dicom.dicomTag;
+    var overlayPos = dicom.overlayPos;
 
     if (!window.location.origin) {
         window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
@@ -54,11 +57,19 @@ require(['jquery','dicomViewer'], function($, dicomViewer){
     });
 
     $('#btnAddLine').on('click', function () {
-        var aLine = curViewer.createLine();
+        require(['dicom/annLine'], function (annLine) {
+            var aLine = new annLine();
+            curViewer.createAnnObject(aLine);
+        });
+        //var aLine = curViewer.createLine();
     });
 
     $('#btnAddRect').on('click', function () {
-        var aRect = curViewer.createRect();
+        require(['dicom/annRect'], function (annRect) {
+            var aRect = new annRect();
+            curViewer.createAnnObject(aRect);
+        });
+        //var aRect = curViewer.createRect();
     });
 
     $('#btnSelect').on('click', function () {

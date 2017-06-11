@@ -230,8 +230,8 @@ function (dicom, annArrow, annObject, jc) {
     }
 
     annRect.prototype.serialize = function () {
-        var result = "{type:{4},ptStart:{x:{0},y:{1}},width:{2},height:{3}}";
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height), this.type);
+        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},width:{2},height:{3}}';
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height), "annRect");
 
         return result;
     }
@@ -242,7 +242,7 @@ function (dicom, annArrow, annObject, jc) {
             var width = jsonObj.width;
             var height = jsonObj.height;
 
-            this.startCreate();
+            this.startCreate(this.parent);
             this.onMouseDown(ptStart);
             this.onMouseMove({
                 x: ptStart.x + width,
@@ -251,7 +251,6 @@ function (dicom, annArrow, annObject, jc) {
             this.onMouseUp();
         }
     }
-
 
     return annRect;
 });

@@ -232,6 +232,11 @@
     <None Include="Properties\PublishProfiles\png.pubxml" />
     <None Include="Properties\PublishProfiles\Profile1.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
+    <Content Include="Scripts\dicom\annArrow.js" />
+    <Content Include="Scripts\dicom\annLine.js" />
+    <Content Include="Scripts\dicom\annObject.js" />
+    <Content Include="Scripts\dicom\annRect.js" />
+    <Content Include="Scripts\dicom\dicomUtil.js" />
     <Content Include="Scripts\dicom\dicomViewer.js" />
     <Content Include="Scripts\lib\domReady.js" />
     <Content Include="Scripts\lib\jCanvaScript.js" />

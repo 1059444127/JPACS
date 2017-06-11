@@ -6,18 +6,19 @@
  */
 
 
-define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject'], function (jQuery, jc, dicom, annObject) {
+define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], function (jQuery, jc, dicom, annObject, module) {
 
-	var dicomTag = dicom.dicomTag;
-	var colors = dicom.colors;
-	var eventType = dicom.eventType;
-	var viewContext = dicom.viewContext;
-	
-	var countDistance = dicom.countDistance;
-	var imageToScreen = dicom.imageToScreen;
-	var screenToImage = dicom.screenToImage;
-	var getSineTheta = dicom.getSineTheta;
-	var getCosineTheta = dicom.getCosineTheta;
+	var dicomTag = dicom.dicomTag,
+		colors = dicom.colors,
+		eventType = dicom.eventType,
+		viewContext = dicom.viewContext,
+		annType = annObject.annType;
+		
+	var countDistance = dicom.countDistance,
+		imageToScreen = dicom.imageToScreen,
+		screenToImage = dicom.screenToImage,
+		getSineTheta = dicom.getSineTheta,
+		getCosineTheta = dicom.getCosineTheta;
 	
     jQuery.fn.onPositionChanged = function (trigger, millis) {
         if (millis == null) millis = 100;
@@ -1091,46 +1092,28 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject'], function (jQu
             var rotateMatrix = jsonObj.rotateMatrix;
             var translateMatrix = jsonObj.translateMatrix;
 
-            var trans11 = trans[0][0],//x scale
-				trans21 = trans[0][1],//x rotate
-				transdx = trans[0][2],
-				trans12 = trans[1][0],//y rotate
-				trans22 = trans[1][1],//y scale
-				transdy = trans[1][2];
-
-            //this.imgLayer.transform(trans11, trans12, trans21, trans22, transdx, transdy, true);
-
             this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
 
             this.imgLayer.optns.scaleMatrix = scaleMatrix;
             this.imgLayer.optns.rotateMatrix = rotateMatrix;
             this.imgLayer.optns.translateMatrix = translateMatrix;
-            //this.imgLayer.optns.redraw = 1;
-            this.scale(1);
 
+            this.scale(1);
+			
+			var annPath = module.config().annPath || 'dicom';
             annObjs.forEach(function (obj) {
                 var type = obj.type;
-                switch (type) {
-                    case annType.rect:
-                        new annRect(dv).deSerialize(obj);
-                        break;
-                    case annType.line:
-                        new annLine(dv).deSerialize(obj);
-                        break;
-                    default:
-                        break;
-                }
+                require([annPath + '/' +obj.type], function(annObj){
+                	var newObj = new annObj();
+                	newObj.id = dv._newObjectId();
+                	newObj.parent = dv;
+                	newObj.deSerialize(obj);
+                	
+                	dv.selectObject();//select no-object
+                });
             });
-
-            dv.selectObject();//select no-object
         }
     }
-
-    //export definitiens
-    //window.dicomViewer = dicomViewer;
-    //window.dicomTag = dicomTag;
-    //window.dicomFile = dicomFile;
-    //window.overlayPos = overlayPos;
 	
 	//reuqire js moudle
 	return dicomViewer;
