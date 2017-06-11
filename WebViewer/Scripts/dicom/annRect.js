@@ -34,6 +34,7 @@ function (dicom, annArrow, annObject, jc) {
     
     annRect.prototype.onMouseDown = function (arg) {
         if (this.curStep == stepEnum.step1) {
+        	
             this.ptStart = {
                 x: arg.x,
                 y: arg.y
@@ -45,9 +46,10 @@ function (dicom, annArrow, annObject, jc) {
     annRect.prototype.onMouseMove = function (arg) {
         var dv = this.parent;
         if (this.curStep == stepEnum.step2) {
-            this.width = Math.abs(arg.x - this.ptStart.x);
-            this.height = Math.abs(arg.y - this.ptStart.y);
-
+            //this.width = Math.abs(arg.x - this.ptStart.x);
+            //this.height = Math.abs(arg.y - this.ptStart.y);
+			this.width = arg.x - this.ptStart.x;
+            this.height = arg.y - this.ptStart.y;
             //create rect if not created
             if (!this.rect) {
                 var rectId = dv._newObjectId();

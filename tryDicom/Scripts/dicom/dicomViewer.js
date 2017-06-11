@@ -957,28 +957,6 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
         return annObj;
 	}
-	
-    dicomViewer.prototype.createRect = function () {
-        var aRect = new annRect();
-        aRect.id = this._newObjectId();
-        this.setContext(viewContext.create);
-
-        this.curSelectObj = aRect;
-        aRect.startCreate(this);
-
-        return aRect;
-    }
-
-    dicomViewer.prototype.createLine = function () {
-        var aLine = new annLine();
-        aLine.id = this._newObjectId();
-        this.setContext(viewContext.create);
-
-        this.curSelectObj = aLine;
-        aLine.startCreate(this);
-
-        return aLine;
-    }
 
     dicomViewer.prototype._onObjectCreated = function (obj) {
         if (obj && obj.isCreated) {
