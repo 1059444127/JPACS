@@ -136,13 +136,11 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
     /*********************************
 	 * the dicomViewer class
-     localWL means whether to calculate WL at the client side, default is undefined (false)
 	 */
-    function dicomViewer(canvasId, localWL) {
+    function dicomViewer(canvasId) {
         this.version = 1; //for serialize
         this.id = newViewerId();
         this.canvasId = canvasId;
-        this.localWL = !!localWL;
 
         this.annotationList = [];
         this.overlayList = [];
@@ -246,25 +244,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         var dv = this;
         dv._adjustWLCallback = callback;
 
-        if (this.localWL) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', dv.imgDataUrl, true);
-            xhr.responseType = 'arraybuffer';
-
-            xhr.onload = function (e) {
-                if (this.status == 200) {
-                    //get binary data as a response
-                    dv.pixelData = new Uint16Array(this.response);
-                    dv._adjustWLLocal(windowWidth, windowCenter);
-                } else {
-                    alert('failed to get image data');
-                }
-            };
-
-            xhr.send();
-        } else {
-            this._getImgPixelData(windowWidth, windowCenter);
-        }
+		this._getImgPixelData(windowWidth, windowCenter);
     }
 
     dicomViewer.prototype._requestJpgImg = function (request) {
@@ -315,238 +295,6 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         } else {
             this._requestJpgImg(request);
             dv._imgDataWorker.isBusy = true;
-        }
-    }
-
-    //with worker
-    dicomViewer.prototype._adjustWLFromServer = function (windowWidth, windowCenter) {
-        var dv = this;
-        if (!this._imgData) {//used to accept the image data
-            this._imgData = new Uint8ClampedArray(this.imgWidth * this.imgHeight * 4);
-        }
-        var worker = this._imgDataWorker;
-        if (!this._imgDataWorker) {
-            var workerJs;
-            var sc = document.getElementsByTagName("script");
-            for (idx = 0; idx < sc.length; idx++) {
-                s = sc.item(idx);
-                if (s.src && s.src.match(/imgDataWorker\.js$/)) {
-                    workerJs = s.src;
-                    break;
-                }
-            }
-
-            this._imgDataRequest = [];
-            this._imgDataWorker = new Worker(workerJs);
-            this._imgDataWorker.isBusy = false;
-
-            this._imgDataWorker.addEventListener('message', function (msg) {
-                var grayData = new Uint8ClampedArray(msg.data.grayData);
-                var windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter,
-                    width = dv.imgWidth, height = dv.imgHeight,
-                    success = msg.data.success;
-                dv._imgData = grayData;
-
-                if (!success) {
-                    console.log('failed to request imgdata.')
-                    return;
-                }
-
-                if (!window.createImageBitmap) {//IE
-                    if (!dv._helpCanvas) {
-                        dv._helpCanvas = document.createElement('canvas');
-                    }
-                    var canvas = dv._helpCanvas;
-                    canvas.width = width;
-                    canvas.height = height,
-                    ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, width, height);
-
-                    var imageData = ctx.createImageData(width, height);
-                    imageData.data.set(grayData);
-                    ctx.putImageData(imageData, 0, 0);
-
-                    dv._reloadImgWithWL(canvas, windowWidth, windowCenter, dv._adjustWLCallback);
-                } else {
-                    var imageData = new ImageData(grayData, width, height);
-                    var a = createImageBitmap(imageData, 0, 0, width, height);
-
-                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
-                        var imgBitmap = sprites[0];
-                        dv._reloadImgWithWL(imgBitmap, windowWidth, windowCenter, dv._adjustWLCallback);
-                    });
-                }
-
-                console.log('finish imgData: ' + windowWidth + "," + windowCenter);
-                dv._imgDataWorker.isBusy = false;
-
-                if (dv._imgDataRequest.length > 0) {
-                    var req = dv._imgDataRequest.pop();
-                    req['grayData'] = dv._imgData.buffer;
-                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
-                    dv._imgDataWorker.postMessage(req, [dv._imgData.buffer]);
-                    dv._imgDataWorker.isBusy = true;
-
-                    dv._imgDataRequest = [];
-                }
-            }, false);
-        }
-
-        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl };
-        request['grayData'] = dv._imgData.buffer;
-        if (this._imgDataWorker.isBusy) {
-            console.info('push request: ' + request.windowWidth + ',' + request.windowCenter);
-            this._imgDataRequest.push(request);
-        } else {
-            this._imgDataWorker.postMessage(request, [dv._imgData.buffer]);
-            dv._imgDataWorker.isBusy = true;
-        }
-    }
-
-    //not with worker
-    dicomViewer.prototype._adjustWLFromServer2 = function (request) {
-        var dv = this;
-
-        console.log(new Date().toLocaleTimeString() + ': start request pixel data,' + request.windowWidth + ',' + request.windowCenter);
-
-        var imgDataUrl = dv.imgDataUrl;
-        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', imgDataUrl, true);
-        xhr.responseType = 'arraybuffer';
-
-        xhr.onload = function (e) {
-            if (this.status == 200) {
-
-                console.log(new Date().toLocaleTimeString() + ': end request pixel data');
-                dv._imgData = new Uint8ClampedArray(this.response);
-                // get binary data as a response
-                //var bytes = new Uint8Array(this.response);
-                //var len = bytes.length;
-                ////grayData = bytes;
-                //var curValue, index;
-                //for (var i = 0; i < len; i++) {
-                //    curValue = bytes[i];
-                //    index = 4 * i;
-                //    dv._imgData[index] = curValue;
-                //    dv._imgData[index + 1] = curValue;
-                //    dv._imgData[index + 2] = curValue;
-                //    dv._imgData[index + 3] = 255;
-                //}
-
-                console.log(new Date().toLocaleTimeString() + ': start load image');
-
-                var canvas = dv._helpCanvas, width = dv.imgWidth, height = dv.imgHeight;
-                canvas.width = width;
-                canvas.height = height,
-                ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, width, height);
-
-                var imageData = ctx.createImageData(width, height);
-                imageData.data.set(dv._imgData);
-                ctx.putImageData(imageData, 0, 0);
-
-                dv._reloadImgWithWL(canvas, request.windowWidth, request.windowCenter, dv._adjustWLCallback);
-
-                delete dv._imgData;
-                dv._imgData = undefined;//release the buff
-
-                console.log(new Date().toLocaleTimeString() + ':finish load imgData: ' + request.windowWidth + "," + request.windowCenter);
-                dv._imgDataWorker.isBusy = false;
-
-                if (dv._imgDataRequest.length > 0) {
-                    var req = dv._imgDataRequest.pop();
-
-                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
-                    dv._requestPixelData(req);
-                    dv._imgDataWorker.isBusy = true;
-
-                    dv._imgDataRequest = [];
-                }
-            } else {
-
-            }
-        };
-
-        xhr.send();
-    }
-
-    dicomViewer.prototype._adjustWLLocal = function (windowWidth, windowCenter) {
-        var dv = this;
-
-        if (!this._wlWorker) {
-            var workerJs;
-            var sc = document.getElementsByTagName("script");
-            for (idx = 0; idx < sc.length; idx++) {
-                s = sc.item(idx);
-                if (s.src && s.src.match(/wlWorker\.js$/)) {
-                    workerJs = s.src;
-                    break;
-                }
-            }
-
-            this._wlReqeust = [];
-            this._wlWorker = new Worker(workerJs);
-            this._wlWorker.isBusy = false;
-
-            this._wlWorker.addEventListener('message', function (msg) {
-                dv.pixelData = new Uint16Array(msg.data.pixelData);
-                var grayData = new Uint8ClampedArray(msg.data.grayData);
-                var width = msg.data.width, height = msg.data.height, windowWidth = msg.data.windowWidth, windowCenter = msg.data.windowCenter;
-                dv._imgData = grayData;
-
-                if (!window.createImageBitmap) {//IE
-                    if (!dv._helpCanvas) {
-                        dv._helpCanvas = document.createElement('canvas');
-                    }
-                    var canvas = dv._helpCanvas;
-                    canvas.width = width;
-                    canvas.height = height,
-                    ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, width, height);
-
-                    var imageData = ctx.createImageData(width, height);
-                    imageData.data.set(grayData);
-                    ctx.putImageData(imageData, 0, 0);
-
-                    dv._reloadImgWithWL(canvas, windowWidth, windowCenter, dv._adjustWLCallback);
-                } else {
-                    var imageData = new ImageData(grayData, width, height);
-                    var a = createImageBitmap(imageData, 0, 0, width, height);
-
-                    Promise.all([createImageBitmap(imageData, 0, 0, width, height)]).then(function (sprites) {
-                        var imgBitmap = sprites[0];
-                        dv._reloadImgWithWL(imgBitmap, windowWidth, windowCenter, dv._adjustWLCallback);
-                    });
-                }
-
-                console.log('finish adjustWL: ' + windowWidth + "," + windowCenter);
-                dv._wlWorker.isBusy = false;
-
-                if (dv._wlReqeust.length > 0) {
-                    var req = dv._wlReqeust.pop();
-                    req['pixelData'] = dv.pixelData.buffer;
-                    req['grayData'] = dv._imgData.buffer;
-                    console.log('pop request and do it: ' + req.windowWidth + ',' + req.windowCenter);
-                    dv._wlWorker.postMessage(req, [dv.pixelData.buffer, dv._imgData.buffer]);
-                    dv._wlWorker.isBusy = true;
-
-                    dv._wlReqeust = [];
-                }
-
-            }, false);
-        }
-
-        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'width': this.imgWidth, 'height': this.imgHeight };
-        request['pixelData'] = dv.pixelData.buffer;
-        request['grayData'] = dv._imgData.buffer;
-        if (this._wlWorker.isBusy) {
-            console.info('push request: ' + request.windowWidth + ',' + request.windowCenter);
-            this._wlReqeust.push(request);
-        } else {
-            this._wlWorker.postMessage(request, [dv.pixelData.buffer, dv._imgData.buffer]);
-            dv._wlWorker.isBusy = true;
         }
     }
 
@@ -705,20 +453,18 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             scaleValue = 0.9;
         }
 		
-		var log= "x:{0},y:{1}".format(evt.offsetX, evt.offsetY);
-		console.log(log);
-		
         var ptPrevious = this.imgLayer.getCenter();
         this.imgLayer.scale(scaleValue);
         var ptNow = this.imgLayer.getCenter();
 
         this.imgLayer.translate(ptPrevious.x - ptNow.x, ptPrevious.y - ptNow.y);
-        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
+        var curScale = this.getScale();
+        this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
 
         //adjust objects' size
         this.annotationList.forEach(function (obj) {
             if (obj.onScale) {
-                obj.onScale();
+                obj.onScale(curScale);
             }
         });
 
@@ -970,33 +716,80 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
     dicomViewer.prototype.rotate = function (angle) {
         if (angle > 0) {
             this.imgLayer.rotate(angle, 'center');
+            
+            var curRotate = this.getRotate();
+	        this.annotationList.forEach(function (obj) {
+	            if (obj.onRotate) {
+	                obj.onRotate(angle, curRotate);
+	            }
+	        });
         }
     }
 
     dicomViewer.prototype.scale = function (value) {
         if (value > 0) {
             this.imgLayer.scale(value);
-            this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
+            
+            var curScale = this.getScale();
+            //adjust objects' size
+	        this.annotationList.forEach(function (obj) {
+	            if (obj.onScale) {
+	                obj.onScale(curScale);
+	            }
+	        });
+        
+            this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
         }
     }
 
     dicomViewer.prototype.getScale = function () {
-        var scale = this.imgLayer.optns.scaleMatrix[0][0];
-        if (scale < 0.1) {
-            scale = 0.1
-        };
-
-        return scale;
+    	var transImg = this.imgLayer.transform();
+  		var n1 = transImg[0][0], //x scale
+        	n3 = transImg[0][1], //
+            n5 = transImg[0][2], //transform dx
+            n2 = transImg[1][0], //
+            n4 = transImg[1][1], //y scale
+            n6 = transImg[1][2]; //transform dy
+	      
+	      var a = n1,b = n3,c = n2,d = n4;
+	      
+	      var scale = Math.sqrt(a*a + b*b);
+	      //var scale = this.imgLayer.optns.scaleMatrix[0][0];
+	      return scale;
     }
+	
+	dicomViewer.prototype.getRotate = function(){
+    	var transImg = this.imgLayer.transform();
+  		var n1 = transImg[0][0], //x scale
+        	n3 = transImg[0][1], //
+            n5 = transImg[0][2], //transform dx
+            n2 = transImg[1][0], //
+            n4 = transImg[1][1], //y scale
+            n6 = transImg[1][2]; //transform dy
+	      
+	      var a = n1,b = n3,c = n2,d = n4;
+	      
+	      var scale = Math.sqrt(a*a + b*b);
+	      
+	      // arc sin, convert from radians to degrees, round
+	      var sin = b/scale;
+	      // next line works for 30deg but not 130deg (returns 50);
+	      // var angle = Math.round(Math.asin(sin) * (180/Math.PI));
+	      var angle = Math.round(Math.atan2(b, a) * (180/Math.PI));
+	      
+	      return angle;
+	}
 
-    dicomViewer.prototype.reset = function (value) {
+    dicomViewer.prototype.trueSize = function (value) {
         this.imgLayer.transform(1, 0, 0, 1, 0, 0, true);
-        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
+        
+        var curScale = this.getScale();
+        this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
 
         //adjust objects' size
         this.annotationList.forEach(function (obj) {
             if (obj.onScale) {
-                obj.onScale();
+                obj.onScale(curScale);
             }
         });
     }
@@ -1012,18 +805,17 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this.reset();
         if (widthScale < heightScale) {
             this.imgLayer.scale(widthScale);
-            //this.imgLayer._y = (canvasHeight - imgHeight * widthScale) / 2;
             this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
         } else {
             this.imgLayer.scale(heightScale);
-            //this.imgLayer._x = (canvasWidth - imgWidth * heightScale) / 2;
             this.imgLayer.translate((canvasWidth - imgWidth * heightScale) / 2, 0);
         }
 
-        this.updateTag(dicomTag.customScale, Math.round(this.getScale() * 100) / 100);
+		var curScale = this.getScale();
+        this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
         this.annotationList.forEach(function (obj) {
             if (obj.onScale) {
-                obj.onScale();
+                obj.onScale(curScale);
             }
         });
     }

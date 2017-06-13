@@ -22,11 +22,11 @@ function (dicom, annObject, jc) {
     annArrow.prototype = new annObject();
 
     //ptEnd points to the target, will with arrow
-    annArrow.prototype.reDraw = function (ptStart, ptEnd) {
+    annArrow.prototype.reDraw = function (ptStart, ptEnd, curScale) {
         this.ptStart = ptStart;
         this.ptEnd = ptEnd;
         var dv = this.parent;
-        var scale = dv.getScale();
+        var scale = curScale || dv.getScale();
 
         if (!this.line) {
             var idLine = this.id + '_line';
@@ -90,8 +90,8 @@ function (dicom, annObject, jc) {
         this.arrowLineB._lineWidth = lineWidth;
     }
 
-    annArrow.prototype.onScale = function () {
-        this.reDraw(this.ptStart, this.ptEnd);
+    annArrow.prototype.onScale = function (curScale) {
+        this.reDraw(this.ptStart, this.ptEnd, curScale);
     }
 
     annArrow.prototype.del = function () {

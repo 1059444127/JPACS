@@ -3,8 +3,8 @@
  * the annLine class
  */
 
-define(['dicomUtil', './annArrow', './annObject', 'jCanvaScript'], 
-function (dicom, annArrow, annObject, jc) {
+define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'], 
+function (dicom, annArrow, annLabel, annObject, jc) {
 
 	var stepEnum = dicom.stepEnum;
 	var annType = annObject.annType;
@@ -82,8 +82,11 @@ function (dicom, annArrow, annObject, jc) {
                 x: ptMiddle.x,
                 y: ptMiddle.y - 30
             };
-            jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-            this.label = jc('#' + idLbl);
+            
+            this.label = new annLabel(this.parent, lblPos);
+            
+//          jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
+//          this.label = jc('#' + idLbl);
 
             this.arrow = new annArrow(this.parent);
 
@@ -158,8 +161,14 @@ function (dicom, annArrow, annObject, jc) {
             this.circleEnd.color(colors.white).opacity(0);
             this.circleMiddle.color(colors.white).opacity(0);
         }
-
-        this.arrow.setEdit(edit);
+		
+		if(this.arrow){
+			this.arrow.setEdit(edit);
+		}
+        
+        if(this.label){
+        	this.label.setEdit(edit);
+        }
     }
 
     annLine.prototype.setDraggable = function (draggable) {
@@ -200,11 +209,14 @@ function (dicom, annArrow, annObject, jc) {
             };
 
             aLine.reDraw();
+            
         });
 
         this._setChildDraggable(lbl, draggable, function (deltaX, deltaY) {
             aLine.reDraw();
         });
+        
+        
     }
 
     annLine.prototype.reDraw = function () {
@@ -228,9 +240,9 @@ function (dicom, annArrow, annObject, jc) {
         this.onScale();
     }
 
-    annLine.prototype.onScale = function () {
+    annLine.prototype.onScale = function (curScale) {
         var dv = this.parent;
-        var scale = dv.getScale();
+        var scale = curScale || dv.getScale();
 
         //change label font size
         var fontSize = Math.round(15 / scale);
@@ -261,9 +273,17 @@ function (dicom, annArrow, annObject, jc) {
         this.circleEnd._lineWidth = lineWidth;
         this.line._lineWidth = lineWidth;
 
-        this.arrow.onScale();
+        this.arrow.onScale(curScale);
     }
-
+	
+	annLine.prototype.onRotate = function(curAngle){
+		var angle = -curAngle;
+		var rect = this.label.getRect();
+		this.label.rotate(angle, 'center', {x:-rect.width/2, y:-rect.height/2});
+		
+		this.reDraw();
+	}
+	
     annLine.prototype.serialize = function () {
         var result = '{type:"{4}",ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}';
         result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y),"annLine");

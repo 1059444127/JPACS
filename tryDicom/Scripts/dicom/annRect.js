@@ -164,8 +164,8 @@ function (dicom, annArrow, annObject, jc) {
         this.onScale();
     }
 
-    annRect.prototype.onScale = function () {
-        var scale = this.parent.getScale();
+    annRect.prototype.onScale = function (curScale) {
+        var scale = curScale || this.parent.getScale();
 
         //change label font size
         var fontSize = Math.round(15 / scale);
@@ -192,9 +192,13 @@ function (dicom, annArrow, annObject, jc) {
         this.circleA._lineWidth = lineWidth;
         this.rect._lineWidth = lineWidth;
 
-        this.arrow.onScale();
+        this.arrow.onScale(curScale);
     }
 
+	annRect.prototype.onRotate = function(curAngle){
+		
+	}
+	
     annRect.prototype.setDraggable = function (draggable) {
         var aRect = this;
 
