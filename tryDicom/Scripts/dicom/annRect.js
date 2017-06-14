@@ -186,6 +186,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		this.label.onRotate(curAngle, totalAngle);
 	}
 	
+	annRect.prototype.onTranslate = function(){
+		this.label.onTranslate();	
+	}
+	
     annRect.prototype.setDraggable = function (draggable) {
         var aRect = this;
 

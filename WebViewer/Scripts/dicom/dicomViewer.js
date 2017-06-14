@@ -537,6 +537,12 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
                     return true;
+                }else{
+        	        dv.annotationList.forEach(function (obj) {
+			            if (obj.onTranslate) {
+			                obj.onTranslate();
+			            }
+        			});
                 }
             }
         });

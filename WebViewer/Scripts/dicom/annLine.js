@@ -207,7 +207,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         });
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
-    		var scale = aLine.viewer.getScale();	
+    		var scale = aLine.viewer.getScale();
         	aLine.arrow.reDraw(aLine.label.position, {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y}, scale);
 		});  
     }
@@ -263,6 +263,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 	
 	annLine.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
+	}
+	
+	annLine.prototype.onTranslate = function(){
+		this.label.onTranslate();
 	}
 	
     annLine.prototype.serialize = function () {
