@@ -25,13 +25,13 @@ function (dicom, annArrow, annLabel, annObject, jc) {
     annLine.prototype = new annObject();
 
     annLine.prototype.startCreate = function (viewer) {
-        var dv = this.parent = viewer;
+        var dv = this.viewer = viewer;
         this.curStep = stepEnum.step1;
         dv.registerEvent(this, eventType.click);
     }
 
     annLine.prototype.onClick = function (arg) {
-        var dv = this.parent;
+        var dv = this.viewer;
 
         if (this.isCreated) {
             return;
@@ -49,7 +49,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             }
 
             var idCircleStart = this.id + '_c1';
-            jc.circle(this.ptStart.x, this.ptStart.y, radius).id(idCircleStart).layer(dv.imgLayerId).color(colors.white);
+            jc.circle(this.ptStart.x, this.ptStart.y, radius).id(idCircleStart).layer(dv.imgLayerId).color(colors.red);
             this.circleStart = jc('#' + idCircleStart);
 
             this.curStep = stepEnum.step2;
@@ -60,35 +60,33 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             };
 
             var idCircleEnd = this.id + '_c2';
-            jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colors.white);
+            jc.circle(this.ptEnd.x, this.ptEnd.y, 5).id(idCircleEnd).layer(dv.imgLayerId).color(colors.red);
             this.circleEnd = jc('#' + idCircleEnd);
 
             var lineId = this.id + '_line';
             jc.line([
 				[this.ptStart.x, this.ptStart.y],
 				[this.ptEnd.x, this.ptEnd.y]
-            ]).id(lineId).layer(dv.imgLayerId).color(colors.white);
+            ]).id(lineId).layer(dv.imgLayerId).color(colors.red);
             this.line = jc('#' + lineId);
 
             var idCircleM = this.id + '_cm';
             var ptMiddle = {};
             ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
             ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
-            jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colors.white).opacity(0);
+            jc.circle(ptMiddle.x, ptMiddle.y, 5).id(idCircleM).layer(dv.imgLayerId).color(colors.red).opacity(0);
             this.circleMiddle = jc('#' + idCircleM);
 
-            var idLbl = this.id + '_lbl';
             var lblPos = {
                 x: ptMiddle.x,
-                y: ptMiddle.y - 30
+                y: ptMiddle.y - 50
             };
             
-            this.label = new annLabel(this.parent, lblPos);
+            this.label = new annLabel(this.viewer, lblPos);
+            this.label.parent = this;
             
-//          jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-//          this.label = jc('#' + idLbl);
-
-            this.arrow = new annArrow(this.parent);
+            this.arrow = new annArrow(this.viewer);
+            this.arrow.parent = this;
 
             this.reDraw();
 
@@ -96,7 +94,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             this._setChildMouseEvent(this.circleStart);
             this._setChildMouseEvent(this.circleEnd);
             this._setChildMouseEvent(this.circleMiddle);
-            this._setChildMouseEvent(this.label);
 
             this.isCreated = true;
             dv._onObjectCreated(this);
@@ -109,7 +106,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
     }
 
     annLine.prototype.del = function () {
-        var dv = this.parent;
+        var dv = this.viewer;
         if (!this.isCreated) {
             //unregister events
             dv.unRegisterEvent(this, eventType.click);
@@ -143,31 +140,29 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         this.isCreated = false;
     }
 
-    annLine.prototype.setEdit = function (edit) {
-        this.isInEdit = edit;
-        this.setDraggable(edit);
+    annLine.prototype.select = function (select) {
+        this.isInEdit = select;
+        this.setDraggable(select);
 
-        if (edit) {
+        if (select) {
             this.line.color(colors.red);
-            this.label.color(colors.red);
             this.circleStart.color(colors.red).opacity(1);
             this.circleEnd.color(colors.red).opacity(1);
             this.circleMiddle.color(colors.red).opacity(0);
 
         } else {
             this.line.color(colors.white);
-            this.label.color(colors.white);
             this.circleStart.color(colors.white).opacity(0);
             this.circleEnd.color(colors.white).opacity(0);
             this.circleMiddle.color(colors.white).opacity(0);
         }
 		
 		if(this.arrow){
-			this.arrow.setEdit(edit);
+			this.arrow.select(select);
 		}
         
         if(this.label){
-        	this.label.setEdit(edit);
+        	this.label.select(select);
         }
     }
 
@@ -177,7 +172,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         var cs = aLine.circleStart;
         var ce = aLine.circleEnd;
         var cm = aLine.circleMiddle;
-        var lbl = aLine.label;
 
         this._setChildDraggable(cs, draggable, function (deltaX, deltaY) {
             aLine.ptStart = {
@@ -211,16 +205,15 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             aLine.reDraw();
             
         });
-
-        this._setChildDraggable(lbl, draggable, function (deltaX, deltaY) {
-            aLine.reDraw();
-        });
-        
-        
+		
+		this.label.setDraggable(draggable, function(deltaX, deltaY){
+    		var scale = aLine.viewer.getScale();	
+        	aLine.arrow.reDraw(aLine.label.position, {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y}, scale);
+		});  
     }
 
     annLine.prototype.reDraw = function () {
-        var dv = this.parent;
+        var dv = this.viewer;
         this.line.points([
 			[this.ptStart.x, this.ptStart.y],
 			[this.ptEnd.x, this.ptEnd.y]
@@ -234,24 +227,15 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
         var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
         this.label.string(msg);
-
-        this.arrow.reDraw({ x: this.label._x, y: this.label._y }, ptMiddle);
-
-        this.onScale();
+		
+		var scale = dv.getScale();	
+        this.arrow.reDraw(this.label.position, ptMiddle, scale);
+        this.onScale(scale);
     }
 
-    annLine.prototype.onScale = function (curScale) {
-        var dv = this.parent;
-        var scale = curScale || dv.getScale();
-
-        //change label font size
-        var fontSize = Math.round(15 / scale);
-        if (fontSize < 10) {
-            fontSize = 10;
-        }
-
-        var font = "{0}px Times New Roman".format(fontSize);
-        this.label.font(font);
+    annLine.prototype.onScale = function (totalScale) {
+        var dv = this.viewer;
+        var scale = totalScale || dv.getScale();
 
         //change circle radius
         var radius = Math.round(5 / scale);
@@ -273,15 +257,12 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         this.circleEnd._lineWidth = lineWidth;
         this.line._lineWidth = lineWidth;
 
-        this.arrow.onScale(curScale);
+        this.arrow.onScale(scale);
+        this.label.onScale(scale);
     }
 	
-	annLine.prototype.onRotate = function(curAngle){
-		var angle = -curAngle;
-		var rect = this.label.getRect();
-		this.label.rotate(angle, 'center', {x:-rect.width/2, y:-rect.height/2});
-		
-		this.reDraw();
+	annLine.prototype.onRotate = function(curAngle, totalAngle){
+		this.label.onRotate(curAngle, totalAngle);
 	}
 	
     annLine.prototype.serialize = function () {
@@ -293,7 +274,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
     annLine.prototype.deSerialize = function (jsonObj) {
         if (jsonObj) {
-            this.startCreate(this.parent);
+            this.startCreate(this.viewer);
             var ptStart = jsonObj.ptStart;
             this.onClick(ptStart);
             var ptEnd = jsonObj.ptEnd;

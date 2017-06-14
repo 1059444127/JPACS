@@ -2,8 +2,8 @@
 * the annRect class
 */
 
-define(['dicomUtil', './annArrow', './annObject', 'jCanvaScript'], 
-function (dicom, annArrow, annObject, jc) {
+define(['dicomUtil', './annArrow', './annLabel','./annObject', 'jCanvaScript'], 
+function (dicom, annArrow, annLabel, annObject, jc) {
 	
 	var stepEnum = dicom.stepEnum;
 	var annType = annObject.annType;
@@ -25,7 +25,7 @@ function (dicom, annArrow, annObject, jc) {
     
     annRect.prototype.startCreate = function (viewer) {
         this.curStep = stepEnum.step1;
-        var dv = this.parent = viewer;
+        var dv = this.viewer = viewer;
 
         dv.registerEvent(this, eventType.mouseDown);
         dv.registerEvent(this, eventType.mouseMove);
@@ -44,10 +44,8 @@ function (dicom, annArrow, annObject, jc) {
     }
 
     annRect.prototype.onMouseMove = function (arg) {
-        var dv = this.parent;
+        var dv = this.viewer;
         if (this.curStep == stepEnum.step2) {
-            //this.width = Math.abs(arg.x - this.ptStart.x);
-            //this.height = Math.abs(arg.y - this.ptStart.y);
 			this.width = arg.x - this.ptStart.x;
             this.height = arg.y - this.ptStart.y;
             //create rect if not created
@@ -72,15 +70,13 @@ function (dicom, annArrow, annObject, jc) {
             }
 
             if (!this.label) {
-                var idLbl = this.id + "_lbl";
+                //var idLbl = this.id + "_lbl";
                 var lblPos = {
                     x: this.ptStart.x + 5,
                     y: this.ptStart.y - 30
                 };
-                jc.text('', lblPos.x, lblPos.y).id(idLbl).layer(dv.imgLayerId).color(colors.white).font('15px Times New Roman');
-                this.label = jc('#' + idLbl);
-
-                this._setChildMouseEvent(this.label);
+                this.label = new annLabel(this.viewer, lblPos);
+                this.label.parent = this;
             }
 
             if (!this.arrow) {
@@ -92,7 +88,7 @@ function (dicom, annArrow, annObject, jc) {
     }
 
     annRect.prototype.onMouseUp = function (arg) {
-        var dv = this.parent;
+        var dv = this.viewer;
         if (this.curStep == stepEnum.step2) {
 
             this.isCreated = true;
@@ -107,7 +103,7 @@ function (dicom, annArrow, annObject, jc) {
     }
 
     annRect.prototype.del = function () {
-        var dv = this.parent;
+        var dv = this.viewer;
         if (!this.isCreated) {
             dv.unRegisterEvent(this, eventType.mouseDown);
             dv.unRegisterEvent(this, eventType.mouseMove);
@@ -134,22 +130,21 @@ function (dicom, annArrow, annObject, jc) {
         }
     }
 
-    annRect.prototype.setEdit = function (edit) {
-        this.isInEdit = edit;
-        this.setDraggable(edit);
-        this.circleA.visible(edit);
+    annRect.prototype.select = function (select) {
+        this.isInEdit = select;
+        this.setDraggable(select);
+        this.circleA.visible(select);
 
-        if (edit) {
+        if (select) {
             this.rect.color(colors.red);
-            this.label.color(colors.red);
             this.circleA.color(colors.red);
         } else {
             this.rect.color(colors.white);
-            this.label.color(colors.white);
             this.circleA.color(colors.white);
         }
-
-        this.arrow.setEdit(edit);
+		
+		this.label.select(select);
+        this.arrow.select(select);
     }
 
     annRect.prototype.reDraw = function () {
@@ -159,22 +154,13 @@ function (dicom, annArrow, annObject, jc) {
 
         this.label.string(msg);
 
-        this.arrow.reDraw({ x: this.label._x, y: this.label._y }, this.ptStart);
+        this.arrow.reDraw(this.label.position, this.ptStart);
 
         this.onScale();
     }
 
-    annRect.prototype.onScale = function (curScale) {
-        var scale = curScale || this.parent.getScale();
-
-        //change label font size
-        var fontSize = Math.round(15 / scale);
-        if (fontSize < 10) {
-            fontSize = 10;
-        }
-
-        var font = "{0}px Times New Roman".format(fontSize);
-        this.label.font(font);
+    annRect.prototype.onScale = function (totalScale) {
+        var scale = totalScale || this.viewer.getScale();
 
         //change circle radius
         var radius = Math.round(5 / scale);
@@ -191,12 +177,13 @@ function (dicom, annArrow, annObject, jc) {
         }
         this.circleA._lineWidth = lineWidth;
         this.rect._lineWidth = lineWidth;
-
-        this.arrow.onScale(curScale);
+		
+		this.label.onScale(scale);
+        this.arrow.onScale(scale);
     }
 
-	annRect.prototype.onRotate = function(curAngle){
-		
+	annRect.prototype.onRotate = function(curAngle, totalAngle){
+		this.label.onRotate(curAngle, totalAngle);
 	}
 	
     annRect.prototype.setDraggable = function (draggable) {
@@ -229,10 +216,10 @@ function (dicom, annArrow, annObject, jc) {
             aRect._translateChild(aRect.label, deltaX, deltaY);
             aRect.reDraw();
         });
-
-        this._setChildDraggable(this.label, draggable, function (deltaX, deltaY) {
-            aRect.reDraw();
-        });
+		
+		this.label.setDraggable(draggable, function(deltaX, deltaY){
+			aRect.arrow.reDraw(aRect.label.position, aRect.ptStart);
+		});
     }
 
     annRect.prototype.serialize = function () {
@@ -248,7 +235,7 @@ function (dicom, annArrow, annObject, jc) {
             var width = jsonObj.width;
             var height = jsonObj.height;
 
-            this.startCreate(this.parent);
+            this.startCreate(this.viewer);
             this.onMouseDown(ptStart);
             this.onMouseMove({
                 x: ptStart.x + width,

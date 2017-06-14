@@ -15,18 +15,18 @@ function (dicom, annObject, jc) {
 	
     function annArrow(viewer) {
         annObject.call(this);
-        this.parent = viewer;
+        this.viewer = viewer;
         this.id = viewer._newObjectId();
     }
 
     annArrow.prototype = new annObject();
 
     //ptEnd points to the target, will with arrow
-    annArrow.prototype.reDraw = function (ptStart, ptEnd, curScale) {
+    annArrow.prototype.reDraw = function (ptStart, ptEnd, totalScale) {
         this.ptStart = ptStart;
         this.ptEnd = ptEnd;
-        var dv = this.parent;
-        var scale = curScale || dv.getScale();
+        var dv = this.viewer;
+        var scale = totalScale || dv.getScale();
 
         if (!this.line) {
             var idLine = this.id + '_line';
@@ -90,8 +90,8 @@ function (dicom, annObject, jc) {
         this.arrowLineB._lineWidth = lineWidth;
     }
 
-    annArrow.prototype.onScale = function (curScale) {
-        this.reDraw(this.ptStart, this.ptEnd, curScale);
+    annArrow.prototype.onScale = function (totalScale) {
+        this.reDraw(this.ptStart, this.ptEnd, totalScale);
     }
 
     annArrow.prototype.del = function () {
@@ -109,10 +109,10 @@ function (dicom, annObject, jc) {
         }
     }
 
-    annArrow.prototype.setEdit = function (edit) {
-        this.isInEdit = edit;
+    annArrow.prototype.select = function (select) {
+        this.isInEdit = select;
 
-        if (edit) {
+        if (select) {
             this.line.color(colors.red);
             this.arrowLineA.color(colors.red);
             this.arrowLineB.color(colors.red);

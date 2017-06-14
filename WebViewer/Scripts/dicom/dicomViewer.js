@@ -78,7 +78,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             return;
         }
 
-        this.parent = viewer;
+        this.viewer = viewer;
         this.id = viewer._newObjectId();
 
         var fontSize = overlaySetting.fontSize;
@@ -405,8 +405,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         //if in select context, and not click any object, will unselect all objects.
         if (this.curContext == viewContext.select) {
             if (!evt.event.cancelBubble) {
-                if (this.curSelectObj && this.curSelectObj.setEdit) {
-                    this.curSelectObj.setEdit(false);
+                if (this.curSelectObj && this.curSelectObj.select) {
+                    this.curSelectObj.select(false);
                     this.curSelectObj = undefined;
                 }
 
@@ -418,8 +418,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
         if (!evt.event.cancelBubble && this.curContext == viewContext.select) {
 
-            if (this.curSelectObj && this.curSelectObj.setEdit) {
-                this.curSelectObj.setEdit(false);
+            if (this.curSelectObj && this.curSelectObj.select) {
+                this.curSelectObj.select(false);
             }
         }
 
@@ -647,15 +647,15 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             //set all other obj not in edit status
             this.annotationList.forEach(function (otherObj) {
                 if (otherObj !== obj) {
-                    otherObj.setEdit(false);
+                    otherObj.select(false);
                 } else {
-                    otherObj.setEdit(true);
+                    otherObj.select(true);
                 }
             });
         } else {
             if (this.curSelectObj) {
                 if (this.curSelectObj.isCreated) {
-                    this.curSelectObj.setEdit(false);
+                    this.curSelectObj.select(false);
                 } else {
                     this.curSelectObj.del();
                 }
@@ -717,10 +717,10 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (angle > 0) {
             this.imgLayer.rotate(angle, 'center');
             
-            var curRotate = this.getRotate();
+            var totalAngle = this.getRotate();
 	        this.annotationList.forEach(function (obj) {
 	            if (obj.onRotate) {
-	                obj.onRotate(angle, curRotate);
+	                obj.onRotate(angle, totalAngle);
 	            }
 	        });
         }
@@ -730,15 +730,15 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (value > 0) {
             this.imgLayer.scale(value);
             
-            var curScale = this.getScale();
+            var totalScale = this.getScale();
             //adjust objects' size
 	        this.annotationList.forEach(function (obj) {
 	            if (obj.onScale) {
-	                obj.onScale(curScale);
+	                obj.onScale(totalScale);
 	            }
 	        });
         
-            this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
+            this.updateTag(dicomTag.customScale, Math.round(totalScale * 100) / 100);
         }
     }
 
@@ -802,7 +802,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         var widthScale = canvasWidth / imgWidth,
 			heightScale = canvasHeight / imgHeight;
 
-        this.reset();
+        this.trueSize();
         if (widthScale < heightScale) {
             this.imgLayer.scale(widthScale);
             this.imgLayer.translate(0, (canvasHeight - imgHeight * widthScale) / 2);
@@ -876,7 +876,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
                 require([annPath + '/' +obj.type], function(annObj){
                 	var newObj = new annObj();
                 	newObj.id = dv._newObjectId();
-                	newObj.parent = dv;
+                	newObj.viewer = dv;
                 	newObj.deSerialize(obj);
                 	
                 	dv.selectObject();//select no-object

@@ -137,7 +137,7 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
     });
 
     $('#btnReset').on('click', function () {
-        curViewer.reset();
+        curViewer.trueSize();
     });
 
     $('#btnDelete').on('click', function () {

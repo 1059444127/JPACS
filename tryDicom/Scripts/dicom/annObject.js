@@ -9,7 +9,7 @@ define(['dicomUtil'], function(dicom){
 	var screenToImage = dicom.screenToImage;
 	
     function annObject() {
-        this.parent = undefined;
+        this.viewer = undefined;
         this.type = annObject.annType.unknown;
         this.isInEdit = false;
         this.isCreated = false;
@@ -24,7 +24,7 @@ define(['dicomUtil'], function(dicom){
 
     //set child jcObject's common mouse event hander, etc.
     annObject.prototype._setChildMouseEvent = function (jcObj) {
-        var dv = this.parent;
+        var dv = this.viewer;
         var annObj = this;
 
         jcObj.mouseover(function (arg) {
@@ -43,9 +43,12 @@ define(['dicomUtil'], function(dicom){
 
         jcObj.mousedown(function (arg) {
             if (dv.curContext == viewContext.select) {
-                dv.selectObject(annObj);
-
-                arg.event.cancelBubble = true;
+            	var curObj = annObj.parent || annObj;
+            	if(dv.curSelectObj !== curObj){
+	                dv.selectObject(curObj);	
+            	}
+            	
+            	arg.event.cancelBubble = true;
             }
         });
     }
@@ -55,7 +58,7 @@ define(['dicomUtil'], function(dicom){
             return;
         }
 
-        var dv = this.parent;
+        var dv = this.viewer;
         var canvas = dv.canvas;
         var annObj = this;
 
