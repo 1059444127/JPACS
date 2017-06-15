@@ -89,7 +89,7 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
     });
 
     $('#btnReset').on('click', function () {
-        curViewer.reset();
+        curViewer.trueSize();
     });
 
     $('#btnDelete').on('click', function () {
@@ -124,33 +124,6 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
 
     $('#btnBestFit').on('click', function () {
         curViewer.bestFit();
-    });
-
-    function adjustWL(width, center, callback) {
-        v1.adjustWL(width, center, function () {
-            if (callback) {
-                callback();
-            }
-        });
-    }
-
-    $('#btnWA').on('click', function () {
-        curWindowWidth += 100;
-        adjustWL(curWindowWidth, curWindowCenter, function () {
-            //alert('btnW add callback');
-        });
-    });
-    $('#btnWM').on('click', function () {
-        curWindowWidth -= 100;
-        adjustWL(curWindowWidth, curWindowCenter);
-    });
-    $('#btnLM').on('click', function () {
-        curWindowCenter -= 100;
-        adjustWL(curWindowWidth, curWindowCenter);
-    });
-    $('#btnLA').on('click', function () {
-        curWindowCenter += 100;
-        adjustWL(curWindowWidth, curWindowCenter);
     });
 });
 

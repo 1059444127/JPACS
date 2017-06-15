@@ -26,7 +26,8 @@ function (dicom, annArrow, annLabel, annObject, jc) {
     annRect.prototype.startCreate = function (viewer) {
         this.curStep = stepEnum.step1;
         var dv = this.viewer = viewer;
-
+		this.id = dv._newObjectId();
+		
         dv.registerEvent(this, eventType.mouseDown);
         dv.registerEvent(this, eventType.mouseMove);
         dv.registerEvent(this, eventType.mouseUp);
@@ -101,6 +102,50 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             this.curStep = stepEnum.step1;
         }
     }
+    
+    annRect.prototype.reDraw = function () {
+        var size = 2 * (this.width + this.height);
+        size = Math.round(size * 100) / 100;
+        var msg = "size=" + size;
+        this.label.string(msg);
+        
+        this.arrow.reDraw(this.label.position, this.ptStart);
+        this.onScale();
+    }
+    
+    annRect.prototype.setDraggable = function (draggable) {
+        var aRect = this;
+
+        this._setChildDraggable(this.rect, draggable, function (deltaX, deltaY) {
+            aRect._translateChild(aRect.circleA, deltaX, deltaY);
+            aRect.ptStart = {
+                x: aRect.rect._x,
+                y: aRect.rect._y
+            };
+
+            aRect.reDraw();
+        });
+
+        this._setChildDraggable(this.circleA, draggable, function (deltaX, deltaY) {
+            aRect._translateChild(aRect.rect, deltaX, deltaY);
+            aRect.rect._width -= deltaX;
+            aRect.rect._height -= deltaY;
+
+            aRect.ptStart = {
+                x: aRect.rect._x,
+                y: aRect.rect._y
+            };
+
+            aRect.width = aRect.rect._width;
+            aRect.height = aRect.rect._height;
+
+            aRect.reDraw();
+        });
+		
+		this.label.setDraggable(draggable, function(deltaX, deltaY){
+			aRect.arrow.reDraw(aRect.label.position, aRect.ptStart);
+		});
+    }
 
     annRect.prototype.del = function () {
         var dv = this.viewer;
@@ -147,18 +192,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         this.arrow.select(select);
     }
 
-    annRect.prototype.reDraw = function () {
-        var size = 2 * (this.width + this.height);
-        size = Math.round(size * 100) / 100;
-        var msg = "size=" + size;
-
-        this.label.string(msg);
-
-        this.arrow.reDraw(this.label.position, this.ptStart);
-
-        this.onScale();
-    }
-
     annRect.prototype.onScale = function (totalScale) {
         var scale = totalScale || this.viewer.getScale();
 
@@ -190,42 +223,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		this.label.onTranslate();	
 	}
 	
-    annRect.prototype.setDraggable = function (draggable) {
-        var aRect = this;
-
-        this._setChildDraggable(this.rect, draggable, function (deltaX, deltaY) {
-            aRect._translateChild(aRect.circleA, deltaX, deltaY);
-            aRect._translateChild(aRect.label, deltaX, deltaY);
-            aRect.ptStart = {
-                x: aRect.rect._x,
-                y: aRect.rect._y
-            };
-
-            aRect.reDraw();
-        });
-
-        this._setChildDraggable(this.circleA, draggable, function (deltaX, deltaY) {
-            aRect._translateChild(aRect.rect, deltaX, deltaY);
-            aRect.rect._width -= deltaX;
-            aRect.rect._height -= deltaY;
-
-            aRect.ptStart = {
-                x: aRect.rect._x,
-                y: aRect.rect._y
-            };
-
-            aRect.width = aRect.rect._width;
-            aRect.height = aRect.rect._height;
-
-            aRect._translateChild(aRect.label, deltaX, deltaY);
-            aRect.reDraw();
-        });
-		
-		this.label.setDraggable(draggable, function(deltaX, deltaY){
-			aRect.arrow.reDraw(aRect.label.position, aRect.ptStart);
-		});
-    }
-
     annRect.prototype.serialize = function () {
         var result = '{type:"{4}",ptStart:{x:{0},y:{1}},width:{2},height:{3}}';
         result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height), "annRect");

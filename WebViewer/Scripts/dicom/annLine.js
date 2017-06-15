@@ -26,6 +26,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
     annLine.prototype.startCreate = function (viewer) {
         var dv = this.viewer = viewer;
+        this.id = dv._newObjectId();
         this.curStep = stepEnum.step1;
         dv.registerEvent(this, eventType.click);
     }
@@ -104,7 +105,28 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
         return;
     }
+    
+    annLine.prototype.reDraw = function () {
+        var dv = this.viewer;
+        this.line.points([
+			[this.ptStart.x, this.ptStart.y],
+			[this.ptEnd.x, this.ptEnd.y]
+        ]);
 
+        var ptMiddle = {};
+        ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
+        ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
+        this.circleMiddle._x = ptMiddle.x;
+        this.circleMiddle._y = ptMiddle.y;
+
+        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
+        this.label.string(msg);
+		
+		var scale = dv.getScale();	
+        this.arrow.reDraw(this.label.position, ptMiddle, scale);
+        this.onScale(scale);
+    }
+    
     annLine.prototype.del = function () {
         var dv = this.viewer;
         if (!this.isCreated) {
@@ -203,34 +225,12 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             };
 
             aLine.reDraw();
-            
         });
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
     		var scale = aLine.viewer.getScale();
         	aLine.arrow.reDraw(aLine.label.position, {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y}, scale);
 		});  
-    }
-
-    annLine.prototype.reDraw = function () {
-        var dv = this.viewer;
-        this.line.points([
-			[this.ptStart.x, this.ptStart.y],
-			[this.ptEnd.x, this.ptEnd.y]
-        ]);
-
-        var ptMiddle = {};
-        ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
-        ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
-        this.circleMiddle._x = ptMiddle.x;
-        this.circleMiddle._y = ptMiddle.y;
-
-        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
-        this.label.string(msg);
-		
-		var scale = dv.getScale();	
-        this.arrow.reDraw(this.label.position, ptMiddle, scale);
-        this.onScale(scale);
     }
 
     annLine.prototype.onScale = function (totalScale) {

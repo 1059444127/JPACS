@@ -11,7 +11,7 @@ function (dicom, annObject, jc) {
         var dv = this.viewer = viewer;
         this.id = viewer._newObjectId();
         this.text = txt;
-        this.position = lblPos;
+        this.position = lblPos;//image 
         
         this.reDraw();
         

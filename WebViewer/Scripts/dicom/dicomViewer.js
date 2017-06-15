@@ -175,7 +175,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             dv.onContextMenu.call(dv, evt);
         };
         this.canvas.onmousewheel = function (evt) {
-            dv.onMouseWheel.call(dv, evt);
+            dv.onMouseWheel.call(dv, evt); //for firefox there is no onmousehweel, use DOMMouseScroll  instead. refer: https://stackoverflow.com/questions/5410084/html5-canvas-mouse-wheel-event
         };
 
         $(this.canvas).on('keyup', function (key) {
@@ -473,6 +473,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         evt.stopImmediatePropagation();
         evt.stopPropagation();
         evt.preventDefault();
+        
+        return false;
     }
 
     dicomViewer.prototype.onContextMenu = function (evt) {
@@ -701,7 +703,6 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
     }
 
 	dicomViewer.prototype.createAnnObject = function(annObj){
-		annObj.id = this._newObjectId();
 		this.setContext(viewContext.create);
 
         this.curSelectObj = annObj;
