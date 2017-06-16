@@ -1,10 +1,5 @@
 /*
- * Depends:
- * 1. jCanvasScript
- * 2. jQuery
- * 3. require.js
  */
-
 
 define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], function (jQuery, jc, dicom, annObject, module) {
 
@@ -129,9 +124,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this.windowWidth = 0;
         this.windowCenter = 0;
         this.dicomTags = [];
-        this.overlayString = '';
-        this.annotationString = '';
-        this.transformString = '';
+        this.serializeJSON = '';
     }
 
     /*********************************
@@ -166,7 +159,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this.imgHeight = dcmFile.imgHeight;
         this.windowCenter = dcmFile.windowCenter;
         this.windowWidth = dcmFile.windowWidth;
-        this.imgDataUrl = dcmFile.imgDataUrl;
+        this.imgUrl = dcmFile.imgUrl;
         this.dicomTagList = dcmFile.dicomTags;
 
         var dv = this;
@@ -174,9 +167,15 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this.canvas.oncontextmenu = function (evt) {
             dv.onContextMenu.call(dv, evt);
         };
-        this.canvas.onmousewheel = function (evt) {
-            dv.onMouseWheel.call(dv, evt); //for firefox there is no onmousehweel, use DOMMouseScroll  instead. refer: https://stackoverflow.com/questions/5410084/html5-canvas-mouse-wheel-event
-        };
+        
+    	this.canvas.onmousewheel = function (evt) {
+        	dv.onMouseWheel.call(dv, evt); 
+    	};
+    	
+    	//for firefox there is no onmousehweel, use DOMMouseScroll  instead. refer: https://stackoverflow.com/questions/5410084/html5-canvas-mouse-wheel-event
+        this.canvas.addEventListener('DOMMouseScroll', function(evt){
+    		dv.onMouseWheel.call(dv, evt); 
+    	});
 
         $(this.canvas).on('keyup', function (key) {
             dv.onKeyUp.call(dv, key);
@@ -252,8 +251,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
         console.log(new Date().toLocaleTimeString() + ': start request image file,' + request.windowWidth + ',' + request.windowCenter);
 
-        var imgDataUrl = dv.imgDataUrl;
-        imgDataUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
+        var imgUrl = dv.imgUrl;
+        imgUrl += "?windowWidth=" + request.windowWidth + "&windowCenter=" + request.windowCenter;
 
         var img = new Image();
         img.onload = function () {
@@ -271,7 +270,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             }
         }
 
-        img.src = imgDataUrl;
+        img.src = imgUrl;
     }
 
     dicomViewer.prototype._getImgPixelData = function (windowWidth, windowCenter) {
@@ -288,7 +287,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             this._imgDataWorker.isBusy = false;
         }
 
-        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter, 'imgDataUrl': dv.imgDataUrl };
+        var request = { 'windowWidth': windowWidth, 'windowCenter': windowCenter};
         if (dv._imgDataWorker.isBusy) {
             console.info('push request: ' + windowWidth + ',' + windowCenter);
             this._imgDataRequest.push(request);
@@ -445,8 +444,11 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (!this.isReady) {
             return;
         }
+        
+        var delta = evt.wheelDelta ? evt.wheelDelta : -evt.detail;
+        
         var scaleValue = 1;
-        if (evt.wheelDelta / 120 > 0) {
+        if (delta / 120 > 0) {
             //up
             scaleValue = 1.1;
         } else { //down

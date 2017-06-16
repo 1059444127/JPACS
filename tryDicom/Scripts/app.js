@@ -28,9 +28,9 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
     dcmFile.id = 1;
 	dcmFile.serializeJSON = '{"version":1,"annObjects":[{type:"annLine",ptStart:{x:330,y:1165},ptEnd:{x:606,y:614}},{type:"annRect",ptStart:{x:869,y:1762},width:242,height:376}],"transForm":[[0.21293928576158958,-0.368821661866501,995.9047823572486],[0.368821661866501,0.21293928576158958,-268.74525126635393]], "scaleMatrix":[[0.425878571523179,0,0],[0,0.425878571523179,0]], "rotateMatrix":[[0.5000000000000002,-0.8660254037844386,1907.6983597145017],[0.8660254037844386,0.5000000000000002,-284.2304845413265]], "translateMatrix":[[1,0,183.45693002492487],[0,1,-147.69757852655277]]}';
 
-	//var imgDataUrl = 'http://localhost/jpacs' + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
-	imgDataUrl = './img/img1.jpg';
-	dcmFile.imgDataUrl = imgDataUrl;
+	//var imgUrl = 'http://localhost/jpacs' + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
+	var imgUrl = './img/img1.jpg';
+	dcmFile.imgUrl = imgUrl;
 	
     if (!window.location.origin) {
         window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port : '');

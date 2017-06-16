@@ -22,8 +22,8 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
         baseUrl += '/' + location.pathname.split('/')[1];
     }
     //var imgDataUrl = baseUrl + "/Image/GetDicomPixel/1";
-    var imgDataUrl = baseUrl + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
-    dcmFile.imgDataUrl = imgDataUrl;
+    var imgUrl = baseUrl + "/Image/GetJPGImageData/{0}".format(dcmFile.id);
+    dcmFile.imgUrl = imgUrl;
 
     //var v1 = new dicomViewer('idCanvas', true);
     var v1 = new dicomViewer('idCanvas');
