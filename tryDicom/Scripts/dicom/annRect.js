@@ -176,6 +176,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
     }
 
     annRect.prototype.select = function (select) {
+		if(this.isInEdit === select){
+			return;
+		}
+		console.log('select ' + this.id);
         this.isInEdit = select;
         this.setDraggable(select);
         this.circleA.visible(select);
@@ -183,9 +187,11 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         if (select) {
             this.rect.color(colors.red);
             this.circleA.color(colors.red);
+            this.circleA.level(this.selectLevel);
         } else {
             this.rect.color(colors.white);
             this.circleA.color(colors.white);
+            this.circleA.level(this.defaultLevel);
         }
 		
 		this.label.select(select);

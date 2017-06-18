@@ -6,16 +6,17 @@
 define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'], 
 function (dicom, annArrow, annLabel, annObject, jc) {
 
-	var stepEnum = dicom.stepEnum;
-	var annType = annObject.annType;
-	var colors = dicom.colors;
-	var eventType = dicom.eventType;
+	var stepEnum = dicom.stepEnum,
+		annType = annObject.annType,
+		colors = dicom.colors,
+		eventType = dicom.eventType;
 	
-	var countDistance = dicom.countDistance;
-	var imageToScreen = dicom.imageToScreen;
-	var screenToImage = dicom.screenToImage;
-	var getSineTheta = dicom.getSineTheta;
-	var getCosineTheta = dicom.getCosineTheta;
+	var countDistance = dicom.countDistance,
+		countDistance = dicom.countDistance,
+		imageToScreen = dicom.imageToScreen,
+		screenToImage = dicom.screenToImage,
+		getSineTheta = dicom.getSineTheta,
+		getCosineTheta = dicom.getCosineTheta;
 	
     function annLine() {
         annObject.call(this);
@@ -55,6 +56,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
             this.curStep = stepEnum.step2;
         } else if (this.curStep == stepEnum.step2) {
+        	var distance = countDistance(this.ptStart, arg);
+			if(distance < 5){//too near
+				return;
+			}
             this.ptEnd = {
                 x: arg.x,
                 y: arg.y
@@ -133,7 +138,23 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             //unregister events
             dv.unRegisterEvent(this, eventType.click);
         }
-
+        
+//      var aLine = this;
+//		var propertys = Object.getOwnPropertyNames(this);
+//		propertys.forEach(function(prop){
+//			var obj = aLine[prop];
+//			if(obj instanceof annObject){
+//				obj.del();
+//			}else{
+//				var proto1 = Object.prototype.toString.call(obj);
+//				var proto = obj['__proto__'];
+//				if('' + proto == 'proto.object'){//jc object
+//					obj.del();
+//				}
+//				//obj.del();
+//			}
+//		});
+		
         if (this.circleStart) {
             this.circleStart.del();
             this.circleStart = undefined;
@@ -163,6 +184,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
     }
 
     annLine.prototype.select = function (select) {
+		if(this.isInEdit === select){
+			return;
+		}
+		console.log('select ' + this.id);
         this.isInEdit = select;
         this.setDraggable(select);
 
@@ -171,12 +196,17 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             this.circleStart.color(colors.red).opacity(1);
             this.circleEnd.color(colors.red).opacity(1);
             this.circleMiddle.color(colors.red).opacity(0);
-
+			this.circleStart.level(this.selectLevel);
+			this.circleEnd.level(this.selectLevel);
+			this.circleMiddle.level(this.selectLevel);
         } else {
             this.line.color(colors.white);
             this.circleStart.color(colors.white).opacity(0);
             this.circleEnd.color(colors.white).opacity(0);
             this.circleMiddle.color(colors.white).opacity(0);
+			this.circleStart.level(this.defaultLevel);
+			this.circleEnd.level(this.defaultLevel);
+			this.circleMiddle.level(this.defaultLevel);
         }
 		
 		if(this.arrow){

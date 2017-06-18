@@ -42,14 +42,13 @@ define(['dicomUtil'], function(dicom){
         });
 
         jcObj.mousedown(function (arg) {
-            if (dv.curContext == viewContext.select) {
+ 			if (dv.curContext == viewContext.select) {
             	var curObj = annObj.parent || annObj;
             	if(dv.curSelectObj !== curObj){
 	                dv.selectObject(curObj);	
             	}
-            	
             	arg.event.cancelBubble = true;
-            }
+        	}
         });
     }
 
@@ -110,5 +109,8 @@ define(['dicomUtil'], function(dicom){
         }
     }
 
+	annObject.prototype.selectLevel = 100;
+	annObject.prototype.defaultLevel = 1;
+	
     return annObject;
 });

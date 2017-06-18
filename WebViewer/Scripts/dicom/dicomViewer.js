@@ -415,13 +415,6 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             }
         }
 
-        if (!evt.event.cancelBubble && this.curContext == viewContext.select) {
-
-            if (this.curSelectObj && this.curSelectObj.select) {
-                this.curSelectObj.select(false);
-            }
-        }
-
         this._handleEvent(evt, eventType.mouseDown, 'onMouseDown');
     }
 
@@ -437,6 +430,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (!this.isReady) {
             return;
         }
+           
         this._handleEvent(evt, eventType.mouseUp, 'onMouseUp');
     }
 
@@ -500,7 +494,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this.imgLayer.draggable({
             disabled: !draggable,
             start: function (arg) {
-                this._lastPos = {x: arg.x, y: arg.y};
+                this._lastPos = {};
+                this._startPos = {x: arg.x, y: arg.y};
                 this._startWL = {width: dv.windowWidth, center: dv.windowCenter};
                 
                 if(dv.curContext == viewContext.select || dv.curContext == viewContext.create){
@@ -509,44 +504,46 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             },
             stop: function (arg) {
                 if (dv.curContext == viewContext.wl) {
-					var ptImg = arg;
-                    if (typeof (this._lastPos.x) != 'undefined') {
-                        var deltaX = ptImg.x - this._lastPos.x;
-                        var deltaY = ptImg.y - this._lastPos.y;
+                    if (typeof (this._startPos.x) != 'undefined') {
+                        var deltaX = arg.x - this._startPos.x;
+                        var deltaY = arg.y - this._startPos.y;
                         if (Math.abs(deltaX) > Math.abs(deltaY)) {
                             deltaY = 0;
                         } else {
                             deltaX = 0;
                         }
-                        //console.log('deltaX: ' + deltaX + ',deltaY: ' + deltaY);
                         if(deltaX != 0 || deltaY != 0){
 	                        this._startWL.width = Math.round(this._startWL.width + deltaX);
                         	this._startWL.center = Math.round(this._startWL.center + deltaY);
                         
                         	dv.adjustWL(this._startWL.width, this._startWL.center);
                         }
-                    }
-
-                    this._lastPos = {
-                        x: ptImg.x,
-                        y: ptImg.y
-                    };
+                    }    
+                    this._startPos = {x: arg.x, y: arg.y};//this is necessary, each drag will call 2 stop events
                 }else if(dv.curContext == viewContext.select || dv.curContext == viewContext.create){
                 	canvas.style.cursor = 'auto';
                 }
-                
-                this.lastPos = {};
-                this._startWL = {};
             },
             drag: function (arg) {
                 if (dv.curContext == viewContext.wl) {
                     return true;
                 }else{
-        	        dv.annotationList.forEach(function (obj) {
-			            if (obj.onTranslate) {
-			                obj.onTranslate();
-			            }
-        			});
+                	if (typeof (this._lastPos.x) != 'undefined') {
+                        var deltaX = arg.x - this._lastPos.x;
+                        var deltaY = arg.y - this._lastPos.y;
+                        if(deltaX != 0 || deltaY != 0){
+		        	        dv.annotationList.forEach(function (obj) {
+					            if (obj.onTranslate) {
+					                obj.onTranslate();
+					            }
+		        			});
+	        			}
+        			}
+        			
+                    this._lastPos = {
+                        x: arg.x,
+                        y: arg.y
+                    };
                 }
             }
         });
@@ -651,18 +648,14 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
     dicomViewer.prototype.selectObject = function (obj) {
         if (obj && obj instanceof annObject) {
-
-            this.curSelectObj = obj;
-
-            //set all other obj not in edit status
-            this.annotationList.forEach(function (otherObj) {
-                if (otherObj !== obj) {
-                    otherObj.select(false);
-                } else {
-                    otherObj.select(true);
-                }
-            });
-        } else {
+			if(this.curSelectObj !== obj){
+				if(this.curSelectObj){
+					this.curSelectObj.select(false);
+				}
+				this.curSelectObj = obj;
+				this.curSelectObj.select(true);
+			}
+        } else {//call selectObject(undefined) to unselect all, e.g. user clicked the canvas
             if (this.curSelectObj) {
                 if (this.curSelectObj.isCreated) {
                     this.curSelectObj.select(false);

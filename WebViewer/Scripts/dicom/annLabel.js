@@ -97,6 +97,9 @@ function (dicom, annObject, jc) {
     }
 
     annLabel.prototype.select = function (select) {
+		if(this.isInEdit === select){
+			return;
+		}
         this.isInEdit = select;
 
  		if (select) {

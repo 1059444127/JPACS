@@ -109,7 +109,6 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
     		var aLine = new annLine();
     		curViewer.createAnnObject(aLine);
     	});
-        //var aLine = curViewer.createLine();
     });
 
     $('#btnAddRect').on('click', function () {
@@ -117,9 +116,15 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
     		var aRect = new annRect();
     		curViewer.createAnnObject(aRect);
     	});
-        //var aRect = curViewer.createRect();
     });
-
+    
+    $('#btnAddCurve').on('click', function () {
+    	require(['dicom/annCurve'], function(annCurve){
+    		var aCurve = new annCurve();
+    		curViewer.createAnnObject(aCurve);
+    	});
+    });
+    
     $('#btnSelect').on('click', function () {
         curViewer.setSelectModel();
     });

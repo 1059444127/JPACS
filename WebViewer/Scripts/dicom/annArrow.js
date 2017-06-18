@@ -13,10 +13,13 @@ function (dicom, annObject, jc) {
 	var getSineTheta = dicom.getSineTheta;
 	var getCosineTheta = dicom.getCosineTheta;
 	
-    function annArrow(viewer) {
+    function annArrow(viewer, ptStart, ptEnd) {
         annObject.call(this);
         this.viewer = viewer;
         this.id = viewer._newObjectId();
+        
+        this.ptStart = ptStart;
+        this.ptEnd = ptEnd;
     }
 
     annArrow.prototype = new annObject();
@@ -110,6 +113,9 @@ function (dicom, annObject, jc) {
     }
 
     annArrow.prototype.select = function (select) {
+		if(this.isInEdit === select){
+			return;
+		}
         this.isInEdit = select;
 
         if (select) {

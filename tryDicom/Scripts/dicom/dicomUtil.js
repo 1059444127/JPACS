@@ -135,7 +135,10 @@ define([], function () {
     dicom.colors = {
         white: '#ffffff',
         red: '#ff0000',
-        yellow: '#ffff00'
+        yellow: '#ffff00',
+        green: '#00FF00',
+        blue: '#0000FF'
+        
     };
 
     /*********************************
@@ -197,6 +200,7 @@ define([], function () {
 	dicom.getSineTheta = getSineTheta;
 	dicom.getCosineTheta = getCosineTheta;
 	dicom.dicomTag = dicomTag;
+	dicom._dDelta = _dDelta;
 	
     return dicom;
 });
