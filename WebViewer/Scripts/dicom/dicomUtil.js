@@ -84,7 +84,21 @@ define([], function () {
 
         return value;
     }
-
+	
+	function countAngle(pt1, pt2){
+		var dPixSpacingX = 1.0;//m_pTrans->m_fPixSpacingX;
+		var dPixSpacingY = 1.0;//m_pTrans->m_fPixSpacingY;
+//		if(m_pTrans->m_fPixSpacingX<0||m_pTrans->m_fPixSpacingY<0)
+//		{
+//			dPixSpacingX = 1.0;
+//			dPixSpacingY = 1.0;
+//		}
+	    var dx = (pt2.x-pt1.x)*dPixSpacingX;
+	    var dy = (pt1.y-pt2.y)*dPixSpacingY;
+	
+	    return (180.0/Math.PI)*Math.atan2(dy, dx);	
+	}
+	
     var _dDelta = 0.0000000001;
 
     function getSineTheta(pt1, pt2) {
@@ -197,6 +211,7 @@ define([], function () {
 	dicom.screenToImage = screenToImage;
 	dicom.imageToScreen = imageToScreen;
 	dicom.countDistance = countDistance;
+	dicom.countAngle = countAngle;
 	dicom.getSineTheta = getSineTheta;
 	dicom.getCosineTheta = getCosineTheta;
 	dicom.dicomTag = dicomTag;

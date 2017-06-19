@@ -4,7 +4,8 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 		annType = annObject.annType,
 		colors = dicom.colors,
 		eventType = dicom.eventType,
-		_dDelta = dicom._dDelta;
+		_dDelta = dicom._dDelta,
+		countAngle = dicom.countAngle;
 
 	var countDistance = dicom.countDistance,
 		imageToScreen = dicom.imageToScreen,
@@ -170,9 +171,19 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 			this.arcle._endAngle = arcEnd;
 			this.arcle._anticlockwise = this.anticlockwise;
 		}
+    	
+    	var angle1 = countAngle(this.ptStart, this.ptCenter);
+    	var angle2 = countAngle(this.ptCenter, this.ptEnd);
+
+	    var dAngleValue= Math.abs(180.0-Math.abs(angle1-angle2));
+	    if (dAngleValue>180.0){
+	        dAngleValue = 360.0-dAngleValue;
+	    }
+	    
+		var lblStr = '{0}\r\n{1}'.format(Math.round(this.radius * 100)/100, Math.round(dAngleValue * 100)/100)
+		this.label.string(lblStr);
 		
-		this.label.string(''+Math.round(this.radius * 100)/100);
-		this.arrow.reDraw(this.label.position, this.ptMiddle, scale);
+		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle, scale);
 	}
 	
 	annCurve.prototype.select = function(select){
@@ -255,7 +266,7 @@ function(dicom, annArrow, annLabel, annObject, jc) {
         
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
     		var scale = aCurve.viewer.getScale();
-        	aCurve.arrow.reDraw(aCurve.label.position, {x:aCurve.circleMiddle._x, y:aCurve.circleMiddle._y}, scale);
+        	aCurve.arrow.reDraw(aCurve.label.getNearestPoint(aCurve.ptMiddle), aCurve.ptMiddle, scale);
 		});  
 	}
 	
@@ -318,17 +329,45 @@ function(dicom, annArrow, annLabel, annObject, jc) {
         this.circleStart._lineWidth = lineWidth;
         this.circleMiddle._lineWidth = lineWidth;
         this.circleEnd._lineWidth = lineWidth;
+        this.arcle._lineWidth = lineWidth;
         
         this.arrow.onScale(scale);
         this.label.onScale(scale);
+        
+        this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle, scale);
 	}
 	
 	annCurve.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
+		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle);
 	}
 	
 	annCurve.prototype.onTranslate = function(){
 		this.label.onTranslate();
+		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle);
+	}
+	
+   	annCurve.prototype.serialize = function () {
+        var result = '{type:"{0}",ptStart:{x:{1},y:{2}},ptEnd:{x:{3},y:{4}},ptMiddle:{x:{5},y:{6}},radius:{7}}';
+	    result = result.format("annCurve", this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y, this.ptMiddle.x, this.ptMiddle.y, this.radius);
+	
+	    return result;
+	}
+
+	annCurve.prototype.deSerialize = function (jsonObj) {
+	    if (jsonObj) {
+	        this.startCreate(this.viewer);
+	        var ptStart = jsonObj.ptStart;
+	        this.onClick(ptStart);
+	        var ptEnd = jsonObj.ptEnd;
+	        this.onClick(ptEnd);
+	        
+	        var ptMiddle = jsonObj.ptMiddle;
+	        var radius = jsonObj.radius;
+	        
+	        this._calcArcBy3Points(ptStart,ptEnd, ptMiddle);
+	        this.reDraw();
+	    }
 	}
 	
 	//input:ptA, ptB, ptC, will check whether the 3 points can compose a valid arc.

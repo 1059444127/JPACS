@@ -128,7 +128,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         this.label.string(msg);
 		
 		var scale = dv.getScale();	
-        this.arrow.reDraw(this.label.position, ptMiddle, scale);
+        this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle, scale);
         this.onScale(scale);
     }
     
@@ -259,7 +259,8 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
     		var scale = aLine.viewer.getScale();
-        	aLine.arrow.reDraw(aLine.label.position, {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y}, scale);
+    		var ptMiddle = {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y};
+        	aLine.arrow.reDraw(aLine.label.getNearestPoint(ptMiddle), ptMiddle, scale);
 		});  
     }
 
@@ -289,14 +290,21 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
         this.arrow.onScale(scale);
         this.label.onScale(scale);
+        
+ 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
+    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle, scale);
     }
 	
 	annLine.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
+ 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
+    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle);
 	}
 	
 	annLine.prototype.onTranslate = function(){
 		this.label.onTranslate();
+ 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
+    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle);
 	}
 	
     annLine.prototype.serialize = function () {

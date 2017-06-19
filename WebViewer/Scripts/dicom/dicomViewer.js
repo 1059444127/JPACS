@@ -394,6 +394,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (!this.isReady) {
             return;
         }
+        //console.log('viwer onClick');
+
         this._handleEvent(evt, eventType.click, 'onClick');
     }
 
@@ -401,6 +403,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (!this.isReady) {
             return;
         }
+		//console.log('viwer mouse down');
         //if in select context, and not click any object, will unselect all objects.
         if (this.curContext == viewContext.select) {
             if (!evt.event.cancelBubble) {
@@ -414,7 +417,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
                 this.draggable(false);
             }
         }
-
+        
         this._handleEvent(evt, eventType.mouseDown, 'onMouseDown');
     }
 
@@ -426,11 +429,11 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         this._handleEvent(evt, eventType.mouseMove, 'onMouseMove');
     }
 
-    dicomViewer.prototype.onMouseUp = function (evt) {
+    dicomViewer.prototype.onMouseUp = function (evt) { 
         if (!this.isReady) {
             return;
         }
-           
+		//console.log('viwer mouse up');
         this._handleEvent(evt, eventType.mouseUp, 'onMouseUp');
     }
 
@@ -449,12 +452,15 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             scaleValue = 0.9;
         }
 		
-        var ptPrevious = this.imgLayer.getCenter();
+		var ptScreenPrevious = {x:evt.x - this.canvas.offsetLeft, y:evt.y - this.canvas.offsetTop};
+        var ptImgPrevious = screenToImage(ptScreenPrevious, this.imgLayer.transform());
         this.imgLayer.scale(scaleValue);
-        var ptNow = this.imgLayer.getCenter();
-
-        this.imgLayer.translate(ptPrevious.x - ptNow.x, ptPrevious.y - ptNow.y);
+        
+        var ptScreenAfter = imageToScreen(ptImgPrevious, this.imgLayer.transform());
+        
+        this.imgLayer.translate(ptScreenPrevious.x - ptScreenAfter.x, ptScreenPrevious.y - ptScreenAfter.y);
         var curScale = this.getScale();
+        
         this.updateTag(dicomTag.customScale, Math.round(curScale * 100) / 100);
 
         //adjust objects' size
@@ -877,11 +883,10 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
                 var type = obj.type;
                 require([annPath + '/' +obj.type], function(annObj){
                 	var newObj = new annObj();
-                	newObj.id = dv._newObjectId();
                 	newObj.viewer = dv;
                 	newObj.deSerialize(obj);
                 	
-                	dv.selectObject();//select no-object
+                	dv.selectObject(undefined);//select no-object
                 });
             });
         }

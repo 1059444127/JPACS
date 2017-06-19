@@ -109,7 +109,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         var msg = "size=" + size;
         this.label.string(msg);
         
-        this.arrow.reDraw(this.label.position, this.ptStart);
+        this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
         this.onScale();
     }
     
@@ -143,7 +143,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         });
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
-			aRect.arrow.reDraw(aRect.label.position, aRect.ptStart);
+			aRect.arrow.reDraw(aRect.label.getNearestPoint(aRect.ptStart), aRect.ptStart);
 		});
     }
 
@@ -219,14 +219,17 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		
 		this.label.onScale(scale);
         this.arrow.onScale(scale);
+        this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
     }
 
 	annRect.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
+		this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
 	}
 	
 	annRect.prototype.onTranslate = function(){
 		this.label.onTranslate();	
+		this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
 	}
 	
     annRect.prototype.serialize = function () {

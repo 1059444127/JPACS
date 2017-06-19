@@ -61,6 +61,9 @@ function (dicom, annObject, jc) {
                     var deltaX = arg.x - this._lastPos.x;
                     var deltaY = arg.y - this._lastPos.y;
                     
+                    this._x += deltaX;
+                    this._y += deltaY;
+                    
                     var pos = this.position();
                     pos.y += this.getRect().height;
                     
@@ -73,6 +76,8 @@ function (dicom, annObject, jc) {
                     x: arg.x,
                     y: arg.y
                 };
+                
+                return true;
             }
 		});
 	}
@@ -107,6 +112,42 @@ function (dicom, annObject, jc) {
         } else {
             this.label.color(colors.white);
         }
+    }
+    
+    annLabel.prototype.getNearestPoint = function(ptTarget){
+    	if(!ptTarget){
+    		return this.position; //note, in image point
+    	}
+    	
+    	var trans = this.viewer.imgLayer.transform();
+    	var ptTScreen = dicom.imageToScreen(ptTarget, trans);
+    	
+    	var rect = this.label.getRect();
+    	var pt1 = {x:this.label._x, y: this.label._y};
+    		pt2 = {x:pt1.x + rect.width, y: pt1.y},
+    		pt3 = {x:pt1.x, y:pt1.y - rect.height},
+    		pt4 = {x:pt1.x+rect.width, y: pt1.y-rect.height};
+    		
+    	var dist1 = dicom.countDistance(pt1, ptTScreen),
+    		dist2 = dicom.countDistance(pt2, ptTScreen),
+    		dist3 = dicom.countDistance(pt3, ptTScreen),
+    		dist4 = dicom.countDistance(pt4, ptTScreen);
+    	
+    	var min = dist1, ptResult = pt1;
+    	if(dist2 < min){
+    		min = dist2;
+    		ptResult = pt2;
+    	}
+    	if(dist3 < min){
+    		min = dist3;
+    		ptResult = pt3;
+    	}
+    	if(dist4 < min){
+    		min = dist4;
+    		ptResult = pt4;
+    	}
+    	
+    	return dicom.screenToImage(ptResult, trans);
     }
     
     return annLabel;

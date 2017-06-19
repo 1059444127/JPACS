@@ -44,7 +44,7 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
         v1.addOverlay(dicomTag.viewPosition, overlayPos.bottomLeft2);
         v1.addOverlay(dicomTag.windowWidth, overlayPos.bottomLeft3, "W");
         v1.addOverlay(dicomTag.windowCenter, overlayPos.bottomLeft4, "L");
-        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight1, "Scale");
+        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight3, "Scale");
     });
 
     var curViewer = v1;
@@ -61,7 +61,6 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
             var aLine = new annLine();
             curViewer.createAnnObject(aLine);
         });
-        //var aLine = curViewer.createLine();
     });
 
     $('#btnAddRect').on('click', function () {
@@ -69,7 +68,13 @@ require(['jquery', 'dicomViewer', 'dicomUtil'], function ($, dicomViewer, dicom)
             var aRect = new annRect();
             curViewer.createAnnObject(aRect);
         });
-        //var aRect = curViewer.createRect();
+    });
+
+    $('#btnAddCurve').on('click', function () {
+        require(['dicom/annCurve'], function (annCurve) {
+            var aCurve = new annCurve();
+            curViewer.createAnnObject(aCurve);
+        });
     });
 
     $('#btnSelect').on('click', function () {

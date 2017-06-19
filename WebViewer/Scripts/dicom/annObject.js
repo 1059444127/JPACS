@@ -42,6 +42,7 @@ define(['dicomUtil'], function(dicom){
         });
 
         jcObj.mousedown(function (arg) {
+   			//console.log('jcObj mousedown');
  			if (dv.curContext == viewContext.select) {
             	var curObj = annObj.parent || annObj;
             	if(dv.curSelectObj !== curObj){
@@ -49,6 +50,21 @@ define(['dicomUtil'], function(dicom){
             	}
             	arg.event.cancelBubble = true;
         	}
+        });
+        
+        jcObj.mouseup(function (arg) {
+   			//console.log('jcObj mouseup');
+        });
+        
+        jcObj.click(function(arg){
+        	//console.log('jcObj onClick');
+// 			if (dv.curContext == viewContext.select) {
+//          	var curObj = annObj.parent || annObj;
+//          	if(dv.curSelectObj !== curObj){
+//	                dv.selectObject(curObj);	
+//          	}
+//          	arg.event.cancelBubble = true;
+//      	}
         });
     }
 

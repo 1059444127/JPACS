@@ -58,7 +58,7 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
         v1.addOverlay(dicomTag.viewPosition, overlayPos.bottomLeft2);
         v1.addOverlay(dicomTag.windowWidth, overlayPos.bottomLeft3, "W");
         v1.addOverlay(dicomTag.windowCenter, overlayPos.bottomLeft4, "L");
-        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight1, "Scale");
+        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight3, "Scale");
     });
     
     var v2 = new dicomViewer('c2');
