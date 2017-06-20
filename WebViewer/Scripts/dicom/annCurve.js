@@ -1,4 +1,5 @@
-define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'], 
+
+define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'],
 function(dicom, annArrow, annLabel, annObject, jc) {
 	var stepEnum = dicom.stepEnum,
 		annType = annObject.annType,
@@ -184,6 +185,7 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 		this.label.string(lblStr);
 		
 		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle, scale);
+		this.onScale(scale);
 	}
 	
 	annCurve.prototype.select = function(select){
@@ -232,42 +234,40 @@ function(dicom, annArrow, annLabel, annObject, jc) {
             if(aCurve._calcArcBy3Points({x:cs._x, y:cs._y}, aCurve.ptEnd, aCurve.ptMiddle, true)){
             	aCurve.reDraw();
             }
-			cs._x = aCurve.ptStart.x;
-			cs._y = aCurve.ptStart.y;
-			ce._x = aCurve.ptEnd.x;
-			ce._y = aCurve.ptEnd.y;
-			cm._x = aCurve.ptMiddle.x;
-			cm._y = aCurve.ptMiddle.y;
+			aCurve._locateCirclePos();
         });
 
         this._setChildDraggable(ce, draggable, function (deltaX, deltaY) {
             if(aCurve._calcArcBy3Points(aCurve.ptStart, {x:ce._x, y:ce._y}, aCurve.ptMiddle, true)){
             	aCurve.reDraw();
             }
-			cs._x = aCurve.ptStart.x;
-			cs._y = aCurve.ptStart.y;
-			ce._x = aCurve.ptEnd.x;
-			ce._y = aCurve.ptEnd.y;
-			cm._x = aCurve.ptMiddle.x;
-			cm._y = aCurve.ptMiddle.y;
+			aCurve._locateCirclePos();
         });
         
         this._setChildDraggable(cm, draggable, function (deltaX, deltaY) {
             if(aCurve._calcArcBy3Points(aCurve.ptStart, aCurve.ptEnd, {x:cm._x, y:cm._y}, true)){
             	aCurve.reDraw();
             }
-			cs._x = aCurve.ptStart.x;
-			cs._y = aCurve.ptStart.y;
-			ce._x = aCurve.ptEnd.x;
-			ce._y = aCurve.ptEnd.y;
-			cm._x = aCurve.ptMiddle.x;
-			cm._y = aCurve.ptMiddle.y;
+			aCurve._locateCirclePos();
         });
         
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
     		var scale = aCurve.viewer.getScale();
         	aCurve.arrow.reDraw(aCurve.label.getNearestPoint(aCurve.ptMiddle), aCurve.ptMiddle, scale);
 		});  
+	}
+	
+	annCurve.prototype._locateCirclePos = function(){
+        var cs = this.circleStart;
+        var ce = this.circleEnd;
+        var cm = this.circleMiddle;
+        
+		cs._x = this.ptStart.x;
+		cs._y = this.ptStart.y;
+		ce._x = this.ptEnd.x;
+		ce._y = this.ptEnd.y;
+		cm._x = this.ptMiddle.x;
+		cm._y = this.ptMiddle.y;
 	}
 	
 	annCurve.prototype.del = function(){
@@ -348,8 +348,8 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 	}
 	
    	annCurve.prototype.serialize = function () {
-        var result = '{type:"{0}",ptStart:{x:{1},y:{2}},ptEnd:{x:{3},y:{4}},ptMiddle:{x:{5},y:{6}},radius:{7}}';
-	    result = result.format("annCurve", this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y, this.ptMiddle.x, this.ptMiddle.y, this.radius);
+        var result = '{type:"{0}",ptStart:{x:{1},y:{2}},ptEnd:{x:{3},y:{4}},ptMiddle:{x:{5},y:{6}},radius:{7},labelPos:{x:{8},y:{9}}}';
+	    result = result.format("annCurve", this.ptStart.x, this.ptStart.y, this.ptEnd.x, this.ptEnd.y, this.ptMiddle.x, this.ptMiddle.y, this.radius, this.label.position().x, this.label.position().y);
 	
 	    return result;
 	}
@@ -365,7 +365,11 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 	        var ptMiddle = jsonObj.ptMiddle;
 	        var radius = jsonObj.radius;
 	        
-	        this._calcArcBy3Points(ptStart,ptEnd, ptMiddle);
+	        this._calcArcBy3Points(ptStart, ptEnd, ptMiddle);
+	        if (jsonObj.labelPos) {
+	            this.label.position(jsonObj.labelPos);
+	        }
+	        
 	        this.reDraw();
 	    }
 	}

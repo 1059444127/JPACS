@@ -118,15 +118,15 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 			[this.ptEnd.x, this.ptEnd.y]
         ]);
 
-        var ptMiddle = {};
+        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
+        this.label.string(msg);
+		
+		var ptMiddle = {};
         ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
         ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
         this.circleMiddle._x = ptMiddle.x;
         this.circleMiddle._y = ptMiddle.y;
 
-        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
-        this.label.string(msg);
-		
 		var scale = dv.getScale();	
         this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle, scale);
         this.onScale(scale);
@@ -308,8 +308,9 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 	}
 	
     annLine.prototype.serialize = function () {
-        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}}}';
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), Math.round(this.ptEnd.y),"annLine");
+        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},ptEnd:{x:{2},y:{3}},labelPos:{x:{5},y:{6}}}';
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.ptEnd.x), 
+        	Math.round(this.ptEnd.y),"annLine",this.label.position().x, this.label.position().y);
 
         return result;
     }
@@ -321,6 +322,9 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             this.onClick(ptStart);
             var ptEnd = jsonObj.ptEnd;
             this.onClick(ptEnd);
+            
+            this.label.position(jsonObj.labelPos);
+            this.reDraw();
         }
     }
 

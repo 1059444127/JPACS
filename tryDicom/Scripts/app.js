@@ -68,17 +68,17 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
 
         var tagList = dcmFile.dicomTags;
         //v1.setDicomTags(tagList);
-        v1.addOverlay(dicomTag.patientName, overlayPos.topLeft1);
-        v1.addOverlay(dicomTag.patientBirthDate, overlayPos.topLeft2, 'Birth');
-        v1.addOverlay(dicomTag.patientSex, overlayPos.topLeft3, 'Sex');
-        v1.addOverlay(dicomTag.patientID, overlayPos.topLeft4, 'ID');
-        v1.addOverlay(dicomTag.studyDate, overlayPos.topRight1, 'Date');
-        v1.addOverlay(dicomTag.studyTime, overlayPos.topRight2, 'Time');
-        v1.addOverlay(dicomTag.bodyPart, overlayPos.bottomLeft1);
-        v1.addOverlay(dicomTag.viewPosition, overlayPos.bottomLeft2);
-        v1.addOverlay(dicomTag.windowWidth, overlayPos.bottomLeft3, "W");
-        v1.addOverlay(dicomTag.windowCenter, overlayPos.bottomLeft4, "L");
-        v1.addOverlay(dicomTag.customScale, overlayPos.bottomRight1, "Scale");
+        v2.addOverlay(dicomTag.patientName, overlayPos.topLeft1);
+        v2.addOverlay(dicomTag.patientBirthDate, overlayPos.topLeft2, 'Birth');
+        v2.addOverlay(dicomTag.patientSex, overlayPos.topLeft3, 'Sex');
+        v2.addOverlay(dicomTag.patientID, overlayPos.topLeft4, 'ID');
+        v2.addOverlay(dicomTag.studyDate, overlayPos.topRight1, 'Date');
+        v2.addOverlay(dicomTag.studyTime, overlayPos.topRight2, 'Time');
+        v2.addOverlay(dicomTag.bodyPart, overlayPos.bottomLeft1);
+        v2.addOverlay(dicomTag.viewPosition, overlayPos.bottomLeft2);
+        v2.addOverlay(dicomTag.windowWidth, overlayPos.bottomLeft3, "W");
+        v2.addOverlay(dicomTag.windowCenter, overlayPos.bottomLeft4, "L");
+        v2.addOverlay(dicomTag.customScale, overlayPos.bottomRight3, "Scale");
     });
     
 	$('#c1').on('click', function(){

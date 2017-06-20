@@ -11,7 +11,7 @@ function (dicom, annObject, jc) {
         var dv = this.viewer = viewer;
         this.id = viewer._newObjectId();
         this.text = txt;
-        this.position = lblPos;//image 
+        this.lblPos = lblPos;//image 
         
         this.reDraw();
         
@@ -25,9 +25,18 @@ function (dicom, annObject, jc) {
 		this.label.string(txt);
 	}
 	
+	annLabel.prototype.position = function(pos){
+		if(!pos){
+			return this.lblPos;
+		}else{
+			this.lblPos = pos;
+			this.reDraw();
+		}
+	}
+	
 	annLabel.prototype.reDraw = function(){
 		var dv = this.viewer;
-		var pos = imageToScreen(this.position,dv.imgLayer.transform());
+		var pos = imageToScreen(this.lblPos,dv.imgLayer.transform());
 
 		if(!this.label){
 			jc.text(this.text ||'hello world', pos.x, pos.y).id(this.id).layer(dv.olLayerId).color(colors.white).font('15px Times New Roman');
@@ -67,7 +76,7 @@ function (dicom, annObject, jc) {
                     var pos = this.position();
                     pos.y += this.getRect().height;
                     
-                    aLabel.position = screenToImage(pos, dv.imgLayer.transform());
+                    aLabel.lblPos = screenToImage(pos, dv.imgLayer.transform());
 	                if (callback) {
 	                    callback.call(aLabel, deltaX, deltaY);
 	                }
@@ -116,7 +125,7 @@ function (dicom, annObject, jc) {
     
     annLabel.prototype.getNearestPoint = function(ptTarget){
     	if(!ptTarget){
-    		return this.position; //note, in image point
+    		return this.position(); //note, in image point
     	}
     	
     	var trans = this.viewer.imgLayer.transform();

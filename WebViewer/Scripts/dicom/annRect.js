@@ -233,8 +233,9 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 	}
 	
     annRect.prototype.serialize = function () {
-        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},width:{2},height:{3}}';
-        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), Math.round(this.width), Math.round(this.height), "annRect");
+        var result = '{type:"{4}",ptStart:{x:{0},y:{1}},width:{2},height:{3},labelPos:{x:{5},y:{6}}}';
+        result = result.format(Math.round(this.ptStart.x), Math.round(this.ptStart.y), 
+        	Math.round(this.width), Math.round(this.height), "annRect", this.label.position().x, this.label.position().y);
 
         return result;
     }
@@ -252,6 +253,9 @@ function (dicom, annArrow, annLabel, annObject, jc) {
                 y: ptStart.y + height
             });
             this.onMouseUp();
+            
+            this.label.position(jsonObj.labelPos);
+            this.reDraw();
         }
     }
 
