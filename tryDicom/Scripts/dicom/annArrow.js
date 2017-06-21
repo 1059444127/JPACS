@@ -98,18 +98,8 @@ function (dicom, annObject, jc) {
     }
 
     annArrow.prototype.del = function () {
-        if (this.line) {
-            this.line.del();
-            this.line = undefined;
-        }
-        if (this.arrowLineA) {
-            this.arrowLineA.del();
-            this.arrowLineA = undefined;
-        }
-        if (this.arrowLineB) {
-            this.arrowLineB.del();
-            this.arrowLineB = undefined;
-        }
+       	this._deleteChild();
+        this.isCreated = false;
     }
 
     annArrow.prototype.select = function (select) {
@@ -117,16 +107,7 @@ function (dicom, annObject, jc) {
 			return;
 		}
         this.isInEdit = select;
-
-        if (select) {
-            this.line.color(colors.red);
-            this.arrowLineA.color(colors.red);
-            this.arrowLineB.color(colors.red);
-        } else {
-            this.line.color(colors.white);
-            this.arrowLineA.color(colors.white);
-            this.arrowLineB.color(colors.white);
-        }
+		this._selectChild(select);
     }
 
     return annArrow;

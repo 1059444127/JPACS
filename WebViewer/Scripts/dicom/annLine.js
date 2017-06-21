@@ -3,8 +3,8 @@
  * the annLine class
  */
 
-define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'], 
-function (dicom, annArrow, annLabel, annObject, jc) {
+define(['dicomUtil', './annLabel', './annObject', 'jCanvaScript'], 
+function (dicom, annLabel, annObject, jc) {
 
 	var stepEnum = dicom.stepEnum,
 		annType = annObject.annType,
@@ -88,13 +88,11 @@ function (dicom, annArrow, annLabel, annObject, jc) {
                 y: ptMiddle.y - 50
             };
             
-            this.label = new annLabel(this.viewer, lblPos);
+            this.label = new annLabel(this.viewer, lblPos, ptMiddle);
             this.label.parent = this;
             
-            this.arrow = new annArrow(this.viewer);
-            this.arrow.parent = this;
-
             this.reDraw();
+            this.onScale();
 
             this.circleStart.mouseStyle = this.circleEnd.mouseStyle = this.circleMiddle.mouseStyle = 'crosshair';
             this._setChildMouseEvent(this.circleStart);
@@ -118,18 +116,15 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 			[this.ptEnd.x, this.ptEnd.y]
         ]);
 
-        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
-        this.label.string(msg);
-		
 		var ptMiddle = {};
         ptMiddle.x = (this.ptStart.x + this.ptEnd.x) / 2;
         ptMiddle.y = (this.ptStart.y + this.ptEnd.y) / 2;
         this.circleMiddle._x = ptMiddle.x;
         this.circleMiddle._y = ptMiddle.y;
-
-		var scale = dv.getScale();	
-        this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle, scale);
-        this.onScale(scale);
+		
+        var msg = "length: " + Math.round(countDistance(this.ptStart, this.ptEnd) * 100) / 100;
+        this.label.string(msg);
+        this.label.targetPosition(ptMiddle);
     }
     
     annLine.prototype.del = function () {
@@ -138,48 +133,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             //unregister events
             dv.unRegisterEvent(this, eventType.click);
         }
-        
-//      var aLine = this;
-//		var propertys = Object.getOwnPropertyNames(this);
-//		propertys.forEach(function(prop){
-//			var obj = aLine[prop];
-//			if(obj instanceof annObject){
-//				obj.del();
-//			}else{
-//				var proto1 = Object.prototype.toString.call(obj);
-//				var proto = obj['__proto__'];
-//				if('' + proto == 'proto.object'){//jc object
-//					obj.del();
-//				}
-//				//obj.del();
-//			}
-//		});
-		
-        if (this.circleStart) {
-            this.circleStart.del();
-            this.circleStart = undefined;
-        }
-        if (this.circleEnd) {
-            this.circleEnd.del();
-            this.circleEnd = undefined;
-        }
-        if (this.circleMiddle) {
-            this.circleMiddle.del();
-            this.circleMiddle = undefined;
-        }
-        if (this.label) {
-            this.label.del();
-            this.label = undefined;
-        }
-        if (this.arrow) {
-            this.arrow.del();
-            this.arrow = undefined;
-        }
-        if (this.line) {
-            this.line.del();
-            this.line = undefined;
-        }
-
+        this._deleteChild();
         this.isCreated = false;
     }
 
@@ -189,33 +143,11 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		}
 		console.log('select ' + this.id);
         this.isInEdit = select;
-        this.setDraggable(select);
-
-        if (select) {
-            this.line.color(colors.red);
-            this.circleStart.color(colors.red).opacity(1);
-            this.circleEnd.color(colors.red).opacity(1);
-            this.circleMiddle.color(colors.red).opacity(0);
-			this.circleStart.level(this.selectLevel);
-			this.circleEnd.level(this.selectLevel);
-			this.circleMiddle.level(this.selectLevel);
-        } else {
-            this.line.color(colors.white);
-            this.circleStart.color(colors.white).opacity(0);
-            this.circleEnd.color(colors.white).opacity(0);
-            this.circleMiddle.color(colors.white).opacity(0);
-			this.circleStart.level(this.defaultLevel);
-			this.circleEnd.level(this.defaultLevel);
-			this.circleMiddle.level(this.defaultLevel);
-        }
-		
-		if(this.arrow){
-			this.arrow.select(select);
-		}
+        this.setDraggable(select);	
         
-        if(this.label){
-        	this.label.select(select);
-        }
+		this._selectChild(select);
+		this.circleStart.opacity(select?1:0);
+		this.circleEnd.opacity(select?1:0);
     }
 
     annLine.prototype.setDraggable = function (draggable) {
@@ -258,9 +190,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         });
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
-    		var scale = aLine.viewer.getScale();
-    		var ptMiddle = {x:aLine.circleMiddle._x, y:aLine.circleMiddle._y};
-        	aLine.arrow.reDraw(aLine.label.getNearestPoint(ptMiddle), ptMiddle, scale);
 		});  
     }
 
@@ -269,9 +198,9 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         var scale = totalScale || dv.getScale();
 
         //change circle radius
-        var radius = Math.round(5 / scale);
-        if (radius < 1) {
-            radius = 1;
+        var radius = Math.round(this.defaultRadius / scale);
+        if (radius < this.minRadius) {
+            radius = this.minRadius;
         }
 
         this.circleStart._radius = radius;
@@ -280,31 +209,23 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 
         //change line size
         var lineWidth = Math.round(1 / scale);
-        if (lineWidth < 0.2) {
-            lineWidth = 0.2;
+        if (lineWidth < this.minLineWidth) {
+            lineWidth = this.minLineWidth;
         }
         this.circleStart._lineWidth = lineWidth;
         this.circleMiddle._lineWidth = lineWidth;
         this.circleEnd._lineWidth = lineWidth;
         this.line._lineWidth = lineWidth;
 
-        this.arrow.onScale(scale);
         this.label.onScale(scale);
-        
- 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
-    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle, scale);
     }
 	
 	annLine.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
- 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
-    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle);
 	}
 	
 	annLine.prototype.onTranslate = function(){
 		this.label.onTranslate();
- 		var ptMiddle = {x:this.circleMiddle._x, y:this.circleMiddle._y};
-    	this.arrow.reDraw(this.label.getNearestPoint(ptMiddle), ptMiddle);
 	}
 	
     annLine.prototype.serialize = function () {
@@ -325,6 +246,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             
             this.label.position(jsonObj.labelPos);
             this.reDraw();
+            this.onScale();
         }
     }
 

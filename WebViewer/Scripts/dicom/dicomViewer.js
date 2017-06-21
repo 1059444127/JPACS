@@ -720,7 +720,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             this.selectObject(obj);
         }
     }
-
+	
     dicomViewer.prototype.rotate = function (angle) {
         if (angle > 0) {
             this.imgLayer.rotate(angle, 'center');

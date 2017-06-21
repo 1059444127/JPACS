@@ -1,18 +1,20 @@
 
-define(['dicomUtil', './annObject', 'jCanvaScript'], 
-function (dicom, annObject, jc) {
+define(['dicomUtil', './annObject', './annArrow', 'jCanvaScript'], 
+function (dicom, annObject, annArrow, jc) {
 	
 	var colors = dicom.colors,
 		imageToScreen = dicom.imageToScreen,
 		screenToImage = dicom.screenToImage;
 	
-    function annLabel(viewer, lblPos, txt) {
+    function annLabel(viewer, lblPos, targetPos, txt) {
         annObject.call(this);
         var dv = this.viewer = viewer;
         this.id = viewer._newObjectId();
         this.text = txt;
         this.lblPos = lblPos;//image 
+        this.targetPos = targetPos;
         
+        this.arrow = new annArrow(viewer, this.lblPos, this.targetPos);
         this.reDraw();
         
         this._setChildMouseEvent(this.label);
@@ -34,6 +36,15 @@ function (dicom, annObject, jc) {
 		}
 	}
 	
+	annLabel.prototype.targetPosition = function(pos){
+		if(!pos){
+			return this.targetPos;
+		}else{
+			this.targetPos = pos;
+			this.reDraw();
+		}
+	}
+	
 	annLabel.prototype.reDraw = function(){
 		var dv = this.viewer;
 		var pos = imageToScreen(this.lblPos,dv.imgLayer.transform());
@@ -46,6 +57,9 @@ function (dicom, annObject, jc) {
 			this.label._x = pos.x;
 			this.label._y = pos.y;
 		}
+		
+		var startPos = this._getNearestPoint(this.targetPos);
+		this.arrow.reDraw(startPos, this.targetPos);
 	}
 	
 	annLabel.prototype.setDraggable = function(draggable, callback){
@@ -76,7 +90,8 @@ function (dicom, annObject, jc) {
                     var pos = this.position();
                     pos.y += this.getRect().height;
                     
-                    aLabel.lblPos = screenToImage(pos, dv.imgLayer.transform());
+                    aLabel.position(screenToImage(pos, dv.imgLayer.transform()));
+					
 	                if (callback) {
 	                    callback.call(aLabel, deltaX, deltaY);
 	                }
@@ -104,10 +119,8 @@ function (dicom, annObject, jc) {
 	}
 	
     annLabel.prototype.del = function () {
-        if (this.label) {
-            this.label.del();
-            this.label = undefined;
-        }
+        this._deleteChild();
+        this.isCreated = false;
     }
 
     annLabel.prototype.select = function (select) {
@@ -115,15 +128,10 @@ function (dicom, annObject, jc) {
 			return;
 		}
         this.isInEdit = select;
-
- 		if (select) {
-            this.label.color(colors.red);
-        } else {
-            this.label.color(colors.white);
-        }
+		this._selectChild(select);
     }
     
-    annLabel.prototype.getNearestPoint = function(ptTarget){
+    annLabel.prototype._getNearestPoint = function(ptTarget){
     	if(!ptTarget){
     		return this.position(); //note, in image point
     	}

@@ -58,13 +58,6 @@ define(['dicomUtil'], function(dicom){
         
         jcObj.click(function(arg){
         	//console.log('jcObj onClick');
-// 			if (dv.curContext == viewContext.select) {
-//          	var curObj = annObj.parent || annObj;
-//          	if(dv.curSelectObj !== curObj){
-//	                dv.selectObject(curObj);	
-//          	}
-//          	arg.event.cancelBubble = true;
-//      	}
         });
     }
 
@@ -118,6 +111,18 @@ define(['dicomUtil'], function(dicom){
         });
     }
 
+	annObject.prototype._isChildJCObject = function(obj){
+		if(!obj){
+			return false;
+		}
+		
+		if(obj.optns){
+			return true;
+		}
+		
+		return false;
+	}
+	
     annObject.prototype._translateChild = function (child, deltaX, deltaY) {
         if (child) {
             child._x += deltaX;
@@ -125,8 +130,45 @@ define(['dicomUtil'], function(dicom){
         }
     }
 
+	annObject.prototype._deleteChild = function(){
+        var thisObj = this;
+		var propertys = Object.getOwnPropertyNames(this);
+		propertys.forEach(function(prop){
+			if(prop != "parent"){
+				var obj = thisObj[prop];
+				if(obj instanceof annObject || thisObj._isChildJCObject(obj)){
+					obj.del();
+					thisObj[prop] = undefined;
+				}
+			}
+
+		});
+	}
+	
+	annObject.prototype._selectChild = function(select){
+    	var thisObj = this;
+		var propertys = Object.getOwnPropertyNames(this);
+		propertys.forEach(function(prop){
+			if(prop != "parent"){
+				var obj = thisObj[prop];
+				if(obj instanceof annObject){
+					obj.select(select);
+				}else if(thisObj._isChildJCObject(obj)){
+					obj.color(select?thisObj.selectColor:thisObj.defaultColor);
+					obj.level(select?thisObj.selectLevel:thisObj.defaultLevel);
+				}
+			}
+		});	
+	}
+	
 	annObject.prototype.selectLevel = 100;
 	annObject.prototype.defaultLevel = 1;
+	annObject.prototype.selectColor = dicom.colors.red;
+	annObject.prototype.defaultColor = dicom.colors.white;
+	
+	annObject.prototype.minLineWidth = 0.3;
+	annObject.prototype.defaultRadius = 5;//default radius for helper circle.
+	annObject.prototype.minRadius = 2;
 	
     return annObject;
 });
