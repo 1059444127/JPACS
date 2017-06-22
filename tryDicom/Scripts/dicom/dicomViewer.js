@@ -164,29 +164,8 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
         var dv = this;
         this.canvas = document.getElementById(dv.canvasId);
-        this.canvas.oncontextmenu = function (evt) {
-            dv.onContextMenu.call(dv, evt);
-        };
-        
-    	this.canvas.onmousewheel = function (evt) {
-        	dv.onMouseWheel.call(dv, evt); 
-    	};
-    	
-    	//for firefox there is no onmousehweel, use DOMMouseScroll  instead. refer: https://stackoverflow.com/questions/5410084/html5-canvas-mouse-wheel-event
-        this.canvas.addEventListener('DOMMouseScroll', function(evt){
-    		dv.onMouseWheel.call(dv, evt); 
-    	});
-
-        $(this.canvas).on('keyup', function (key) {
-            dv.onKeyUp.call(dv, key);
-        });
 
         jc.start(dv.canvasId, true);
-
-        $(this.canvas).onPositionChanged(function () {
-            //console.log('canvas pos changed');
-            jc.canvas(dv.canvasId).restart();
-        });
 
         this.imgLayerId = this.id + '_imgLayer';
         this.olLayerId = this.id + '_overlayLayer';
@@ -194,21 +173,9 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         dv.imgLayer = jc.layer(dv.imgLayerId).down('bottom');
         dv.olLayer = jc.layer(dv.olLayerId).up('top');
 
-        //register imglayer events
-        dv.imgLayer.mousedown(function (arg) {
-            dv.onMouseDown.call(dv, arg)
-        });
-        dv.imgLayer.mousemove(function (arg) {
-            dv.onMouseMove.call(dv, arg)
-        });
-        dv.imgLayer.mouseup(function (arg) {
-            dv.onMouseUp.call(dv, arg)
-        });
-        dv.imgLayer.click(function (arg) {
-            dv.onClick.call(dv, arg)
-        });
-
 		this.setContext(viewContext.pan);
+		
+		this._registerEvents();
 		
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
             if (callBack) {
@@ -226,7 +193,50 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
             }
         });
     }
+    
+	dicomViewer.prototype._registerEvents = function(){
+        var dv = this;
+        this.canvas.oncontextmenu = function (evt) {
+            dv.onContextMenu.call(dv, evt);
+        };
+        
+    	this.canvas.onmousewheel = function (evt) {
+        	dv.onMouseWheel.call(dv, evt); 
+    	};
+    	
+    	$("#"+dv.canvasId).on('dblclick', function(){
+    		return false;
+    	});
 
+    	//for firefox there is no onmousehweel, use DOMMouseScroll  instead. refer: https://stackoverflow.com/questions/5410084/html5-canvas-mouse-wheel-event
+        this.canvas.addEventListener('DOMMouseScroll', function(evt){
+    		dv.onMouseWheel.call(dv, evt); 
+    	});
+
+        $(this.canvas).on('keyup', function (key) {
+            dv.onKeyUp.call(dv, key);
+        });
+        
+        $(this.canvas).onPositionChanged(function () {
+            //console.log('canvas pos changed');
+            jc.canvas(dv.canvasId).restart();
+        });
+        
+        //register imglayer events
+        dv.imgLayer.mousedown(function (arg) {
+            dv.onMouseDown.call(dv, arg);
+        });
+        dv.imgLayer.mousemove(function (arg) {
+            dv.onMouseMove.call(dv, arg);
+        });
+        dv.imgLayer.mouseup(function (arg) {
+            dv.onMouseUp.call(dv, arg);
+        });
+        dv.imgLayer.click(function (arg) {
+            dv.onClick.call(dv, arg);
+        });
+	}
+	
     dicomViewer.prototype.save = function () {
         var dcmFile = {};
         dcmFile.id = this.dicomFile.id;

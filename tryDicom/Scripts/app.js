@@ -99,11 +99,6 @@ require(['jquery','dicomViewer', 'dicomUtil'], function($, dicomViewer, dicom){
     var curWindowCenter = v1.windowCenter;
     var curWindowWidth = v1.windowWidth;
 
-    $('#c1').on('click', function () {
-        $('#c1').addClass('selected');
-        curViewer = v1;
-    });
-
     $('#btnAddLine').on('click', function () {
     	require(['dicom/annLine'], function(annLine){
     		var aLine = new annLine();
