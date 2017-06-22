@@ -84,8 +84,8 @@ function (dicom, annObject, jc) {
         }
 
         var lineWidth = Math.round(1 / scale);
-        if (lineWidth < 0.2) {
-            lineWidth = 0.2;
+        if (lineWidth < 0.3) {
+            lineWidth = 0.3;
         }
 
         this.line._lineWidth = lineWidth;

@@ -1,6 +1,6 @@
 
-define(['dicomUtil', './annArrow', './annLabel', './annObject', 'jCanvaScript'],
-function(dicom, annArrow, annLabel, annObject, jc) {
+define(['dicomUtil','./annLabel', './annObject', 'jCanvaScript'],
+function(dicom, annLabel, annObject, jc) {
 	var stepEnum = dicom.stepEnum,
 		annType = annObject.annType,
 		colors = dicom.colors,
@@ -13,7 +13,11 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 		screenToImage = dicom.screenToImage,
 		getSineTheta = dicom.getSineTheta,
 		getCosineTheta = dicom.getCosineTheta;
-
+	
+	var defaultCircleRadius = 5,
+		minCircleRadius = 2,
+		minLineWidth = 0.3;
+		
 	function annCurve() {
 		annObject.call(this);
 		this.type = annType.line;
@@ -24,9 +28,6 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 			y: 1
 		};
 		this.defaultRadius = 170;
-
-		this.isArcReady = false;
-		this._arcIndex = 0;
 	}
 
 	annCurve.prototype = new annObject();
@@ -81,13 +82,11 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 			this.ptMiddle = this._calcMiddlePointByRadius(this.defaultRadius, this.ptDefaultDir);
 			this._calcArcBy3Points(this.ptStart, this.ptEnd, this.ptMiddle);
 			
-			this.label = new annLabel(this.viewer, this.ptCenter, ''+Math.round(this.radius * 100)/100);
+			this.label = new annLabel(this.viewer, this.ptCenter, this.ptMiddle,  ''+Math.round(this.radius * 100)/100);
 			this.label.parent = this;
 
-			this.arrow = new annArrow(this.viewer, this.ptCenter, this.ptMiddle);
-			this.arrow.parent = this;
-
 			this.reDraw();
+			this.onScale();
 
 			this.circleStart.mouseStyle = this.circleEnd.mouseStyle = this.circleMiddle.mouseStyle = 'crosshair';
 			this._setChildMouseEvent(this.circleStart);
@@ -107,9 +106,9 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 	annCurve.prototype.reDraw = function(){
 		var dv = this.viewer;
 		var scale = dv.getScale();
-		var radius = Math.round(5 / scale);
-		if(radius < 1) {
-			radius = 1;
+		var radius = Math.round(defaultCircleRadius / scale);
+		if(radius < minCircleRadius) {
+			radius = minCircleRadius;
 		}
 		
 		if(!this.circleMiddle){
@@ -122,16 +121,6 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 			this.circleMiddle.radius = radius;
 		}
 		
-//		if(!this.circleC){
-//			var idCircleC = this.id + '_cc';
-//			jc.circle(this.ptCenter.x, this.ptCenter.y, radius).id(idCircleC).layer(dv.imgLayerId).color(colors.red);
-//			this.circleC= jc('#' + idCircleC);	
-//		}else{
-//			this.circleC._x = this.ptCenter.x;
-//			this.circleC._y = this.ptCenter.y;
-//			this.circleC.radius = radius;
-//		}
-//		
 		var arcStart = this._calcPointAngle(this.ptStart),
 			arcEnd = this._calcPointAngle(this.ptEnd),
 			arcMiddle = this._calcPointAngle(this.ptMiddle);
@@ -183,9 +172,7 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 	    
 		var lblStr = '{0}\r\n{1}'.format(Math.round(this.radius * 100)/100, Math.round(dAngleValue * 100)/100)
 		this.label.string(lblStr);
-		
-		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle, scale);
-		this.onScale(scale);
+		this.label.targetPosition(this.ptMiddle);
 	}
 	
 	annCurve.prototype.select = function(select){
@@ -196,31 +183,7 @@ function(dicom, annArrow, annLabel, annObject, jc) {
         this.isInEdit = select;
         this.setDraggable(select);
 
-        if (select) {
-            this.circleStart.color(colors.red).opacity(1);
-            this.circleEnd.color(colors.blue).opacity(1);
-            this.circleMiddle.color(colors.yellow).opacity(1);
-            this.arcle.color(colors.red);
-			this.circleStart.level(this.selectLevel);
-			this.circleEnd.level(this.selectLevel);
-			this.circleMiddle.level(this.selectLevel);
-        } else {
-            this.circleStart.color(colors.white).opacity(1);
-            this.circleEnd.color(colors.white).opacity(1);
-            this.circleMiddle.color(colors.white).opacity(1);
-            this.arcle.color(colors.white);
-			this.circleStart.level(this.defaultLevel);
-			this.circleEnd.level(this.defaultLevel);
-			this.circleMiddle.level(this.defaultLevel);
-        }
-		
-		if(this.arrow){
-			this.arrow.select(select);
-		}
-        
-        if(this.label){
-        	this.label.select(select);
-        }
+      	this._selectChild(select);
 	}
 	
 	annCurve.prototype.setDraggable = function(draggable){
@@ -252,8 +215,6 @@ function(dicom, annArrow, annLabel, annObject, jc) {
         });
         
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
-    		var scale = aCurve.viewer.getScale();
-        	aCurve.arrow.reDraw(aCurve.label.getNearestPoint(aCurve.ptMiddle), aCurve.ptMiddle, scale);
 		});  
 	}
 	
@@ -276,35 +237,7 @@ function(dicom, annArrow, annLabel, annObject, jc) {
             //unregister events
             dv.unRegisterEvent(this, eventType.click);
         }
-
-        if (this.circleStart) {
-            this.circleStart.del();
-            this.circleStart = undefined;
-        }
-        if (this.circleEnd) {
-            this.circleEnd.del();
-            this.circleEnd = undefined;
-        }
-        if (this.circleMiddle) {
-            this.circleMiddle.del();
-            this.circleMiddle = undefined;
-        }
-        if (this.label) {
-            this.label.del();
-            this.label = undefined;
-        }
-        if (this.arrow) {
-            this.arrow.del();
-            this.arrow = undefined;
-        }
-		if(this.arcle){
-			this.arcle.del();
-			this.arcle = undefined;
-		}
-		if(this.circleC){
-			this.circleC.del();
-		}
-		
+		this._deleteChild();
         this.isCreated = false;
 	}
 	
@@ -312,9 +245,9 @@ function(dicom, annArrow, annLabel, annObject, jc) {
         var dv = this.viewer;
         var scale = totalScale || dv.getScale();
         //change circle radius
-        var radius = Math.round(5 / scale);
-        if (radius < 1) {
-            radius = 1;
+        var radius = Math.round(defaultCircleRadius / scale);
+        if (radius < minCircleRadius) {
+            radius = minCircleRadius;
         }
 
         this.circleStart._radius = radius;
@@ -323,28 +256,23 @@ function(dicom, annArrow, annLabel, annObject, jc) {
 
         //change line size
         var lineWidth = Math.round(1 / scale);
-        if (lineWidth < 0.2) {
-            lineWidth = 0.2;
+        if (lineWidth < minLineWidth) {
+            lineWidth = minLineWidth;
         }
         this.circleStart._lineWidth = lineWidth;
         this.circleMiddle._lineWidth = lineWidth;
         this.circleEnd._lineWidth = lineWidth;
         this.arcle._lineWidth = lineWidth;
         
-        this.arrow.onScale(scale);
         this.label.onScale(scale);
-        
-        this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle, scale);
 	}
 	
 	annCurve.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
-		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle);
 	}
 	
 	annCurve.prototype.onTranslate = function(){
 		this.label.onTranslate();
-		this.arrow.reDraw(this.label.getNearestPoint(this.ptMiddle), this.ptMiddle);
 	}
 	
    	annCurve.prototype.serialize = function () {

@@ -666,7 +666,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
                 if (this.curSelectObj.isCreated) {
                     this.curSelectObj.select(false);
                 } else {
-                    this.curSelectObj.del();
+                	this.deleteCurObject();
                 }
             }
 
@@ -685,7 +685,7 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
         if (obj && obj instanceof annObject) {
             obj.del();
 
-            var i = 0,
+            var i = 0, found = false,
 				len = this.annotationList.length;
             for (i = 0; i < len; i++) {
                 if (this.annotationList[i] === obj) {
@@ -705,7 +705,10 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 
 	dicomViewer.prototype.createAnnObject = function(annObj){
 		this.setContext(viewContext.create);
-
+		if(this.curSelectObj){
+			this.selectObject(undefined);
+		}
+		
         this.curSelectObj = annObj;
         annObj.startCreate(this);
 

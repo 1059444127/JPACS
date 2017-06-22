@@ -2,8 +2,8 @@
 * the annRect class
 */
 
-define(['dicomUtil', './annArrow', './annLabel','./annObject', 'jCanvaScript'], 
-function (dicom, annArrow, annLabel, annObject, jc) {
+define(['dicomUtil','./annLabel','./annObject', 'jCanvaScript'], 
+function (dicom, annLabel, annObject, jc) {
 	
 	var stepEnum = dicom.stepEnum;
 	var annType = annObject.annType;
@@ -16,6 +16,10 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 	var getSineTheta = dicom.getSineTheta;
 	var getCosineTheta = dicom.getCosineTheta;
 	
+	var defaultCircleRadius = 5,
+		minCircleRadius = 2,
+		minLineWidth = 0.3;
+		
     function annRect() {
         annObject.call(this);
         this.type = annType.rect;
@@ -76,15 +80,12 @@ function (dicom, annArrow, annLabel, annObject, jc) {
                     x: this.ptStart.x + 5,
                     y: this.ptStart.y - 30
                 };
-                this.label = new annLabel(this.viewer, lblPos);
+                this.label = new annLabel(this.viewer, lblPos, this.ptStart);
                 this.label.parent = this;
             }
 
-            if (!this.arrow) {
-                this.arrow = new annArrow(dv);
-            }
-
             this.reDraw();
+            this.onScale();
         }
     }
 
@@ -109,8 +110,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         var msg = "size=" + size;
         this.label.string(msg);
         
-        this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
-        this.onScale();
+        this.label.targetPosition(this.ptStart);
     }
     
     annRect.prototype.setDraggable = function (draggable) {
@@ -143,7 +143,6 @@ function (dicom, annArrow, annLabel, annObject, jc) {
         });
 		
 		this.label.setDraggable(draggable, function(deltaX, deltaY){
-			aRect.arrow.reDraw(aRect.label.getNearestPoint(aRect.ptStart), aRect.ptStart);
 		});
     }
 
@@ -155,24 +154,8 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             dv.unRegisterEvent(this, eventType.mouseUp);
         }
 
-        if (this.rect) {
-            this.rect.del();
-            this.rect = undefined;
-        }
-
-        if (this.circleA) {
-            this.circleA.del();
-            this.circleA = undefined;
-        }
-
-        if (this.label) {
-            this.label.del();
-            this.label = undefined;
-        }
-        if (this.arrow) {
-            this.arrow.del();
-            this.arrow = undefined;
-        }
+        this._deleteChild();
+        this.isCreated = false;
     }
 
     annRect.prototype.select = function (select) {
@@ -182,54 +165,39 @@ function (dicom, annArrow, annLabel, annObject, jc) {
 		console.log('select ' + this.id);
         this.isInEdit = select;
         this.setDraggable(select);
+        
+        this._selectChild(select);
         this.circleA.visible(select);
-
-        if (select) {
-            this.rect.color(colors.red);
-            this.circleA.color(colors.red);
-            this.circleA.level(this.selectLevel);
-        } else {
-            this.rect.color(colors.white);
-            this.circleA.color(colors.white);
-            this.circleA.level(this.defaultLevel);
-        }
-		
-		this.label.select(select);
-        this.arrow.select(select);
     }
 
     annRect.prototype.onScale = function (totalScale) {
         var scale = totalScale || this.viewer.getScale();
 
         //change circle radius
-        var radius = Math.round(5 / scale);
-        if (radius < 1) {
-            radius = 1;
+        var radius = Math.round(defaultCircleRadius / scale);
+        if (radius < minCircleRadius) {
+            radius = minCircleRadius;
         }
 
         this.circleA._radius = radius;
 
         //change line size
         var lineWidth = Math.round(1 / scale);
-        if (lineWidth < 0.2) {
-            lineWidth = 0.2;
+        if (lineWidth < minLineWidth) {
+            lineWidth = minLineWidth
         }
         this.circleA._lineWidth = lineWidth;
         this.rect._lineWidth = lineWidth;
 		
 		this.label.onScale(scale);
-        this.arrow.onScale(scale);
-        this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
     }
 
 	annRect.prototype.onRotate = function(curAngle, totalAngle){
 		this.label.onRotate(curAngle, totalAngle);
-		this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
 	}
 	
 	annRect.prototype.onTranslate = function(){
 		this.label.onTranslate();	
-		this.arrow.reDraw(this.label.getNearestPoint(this.ptStart), this.ptStart);
 	}
 	
     annRect.prototype.serialize = function () {
@@ -256,6 +224,7 @@ function (dicom, annArrow, annLabel, annObject, jc) {
             
             this.label.position(jsonObj.labelPos);
             this.reDraw();
+            this.onScale();
         }
     }
 

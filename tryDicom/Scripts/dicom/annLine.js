@@ -18,6 +18,10 @@ function (dicom, annLabel, annObject, jc) {
 		getSineTheta = dicom.getSineTheta,
 		getCosineTheta = dicom.getCosineTheta;
 	
+	var defaultCircleRadius = 5,
+		minCircleRadius = 2,
+		minLineWidth = 0.3;
+		
     function annLine() {
         annObject.call(this);
         this.type = annType.line;
@@ -198,9 +202,9 @@ function (dicom, annLabel, annObject, jc) {
         var scale = totalScale || dv.getScale();
 
         //change circle radius
-        var radius = Math.round(this.defaultRadius / scale);
-        if (radius < this.minRadius) {
-            radius = this.minRadius;
+        var radius = Math.round(defaultCircleRadius / scale);
+        if (radius < minCircleRadius) {
+            radius = minCircleRadius;
         }
 
         this.circleStart._radius = radius;
@@ -209,8 +213,8 @@ function (dicom, annLabel, annObject, jc) {
 
         //change line size
         var lineWidth = Math.round(1 / scale);
-        if (lineWidth < this.minLineWidth) {
-            lineWidth = this.minLineWidth;
+        if (lineWidth < minLineWidth) {
+            lineWidth = minLineWidth;
         }
         this.circleStart._lineWidth = lineWidth;
         this.circleMiddle._lineWidth = lineWidth;

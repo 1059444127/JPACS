@@ -134,14 +134,11 @@ define(['dicomUtil'], function(dicom){
         var thisObj = this;
 		var propertys = Object.getOwnPropertyNames(this);
 		propertys.forEach(function(prop){
-			if(prop != "parent"){
-				var obj = thisObj[prop];
-				if(obj instanceof annObject || thisObj._isChildJCObject(obj)){
-					obj.del();
-					thisObj[prop] = undefined;
-				}
-			}
-
+			var obj = thisObj[prop];
+			if( (obj instanceof annObject && obj != thisObj.parent)|| thisObj._isChildJCObject(obj)){
+				obj.del();
+				thisObj[prop] = undefined;
+			}	
 		});
 	}
 	
@@ -149,14 +146,12 @@ define(['dicomUtil'], function(dicom){
     	var thisObj = this;
 		var propertys = Object.getOwnPropertyNames(this);
 		propertys.forEach(function(prop){
-			if(prop != "parent"){
-				var obj = thisObj[prop];
-				if(obj instanceof annObject){
-					obj.select(select);
-				}else if(thisObj._isChildJCObject(obj)){
-					obj.color(select?thisObj.selectColor:thisObj.defaultColor);
-					obj.level(select?thisObj.selectLevel:thisObj.defaultLevel);
-				}
+			var obj = thisObj[prop];
+			if(obj instanceof annObject && obj != thisObj.parent){
+				obj.select(select);
+			}else if(thisObj._isChildJCObject(obj)){
+				obj.color(select?thisObj.selectColor:thisObj.defaultColor);
+				obj.level(select?thisObj.selectLevel:thisObj.defaultLevel);
 			}
 		});	
 	}
@@ -165,10 +160,6 @@ define(['dicomUtil'], function(dicom){
 	annObject.prototype.defaultLevel = 1;
 	annObject.prototype.selectColor = dicom.colors.red;
 	annObject.prototype.defaultColor = dicom.colors.white;
-	
-	annObject.prototype.minLineWidth = 0.3;
-	annObject.prototype.defaultRadius = 5;//default radius for helper circle.
-	annObject.prototype.minRadius = 2;
 	
     return annObject;
 });
