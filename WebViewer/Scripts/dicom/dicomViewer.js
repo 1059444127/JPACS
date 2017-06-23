@@ -178,10 +178,6 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
 		this._registerEvents();
 		
         this.adjustWL(this.windowWidth, this.windowCenter, function () {
-            if (callBack) {
-                callBack.call(dv);
-            }
-
             dv.draggable(true);
             dv.isReady = true;
 
@@ -190,6 +186,10 @@ define(['jquery', 'jCanvaScript', 'dicomUtil', 'dicom/annObject', 'module'], fun
                 this.deSerialize(strJSON);
             } else {
                 this.bestFit();
+            }
+            
+            if (callBack) {
+                callBack.call(dv);
             }
         });
     }

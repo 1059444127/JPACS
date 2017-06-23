@@ -12,7 +12,6 @@ function (dicom, annLabel, annObject, jc) {
 		eventType = dicom.eventType;
 	
 	var countDistance = dicom.countDistance,
-		countDistance = dicom.countDistance,
 		imageToScreen = dicom.imageToScreen,
 		screenToImage = dicom.screenToImage,
 		getSineTheta = dicom.getSineTheta,
