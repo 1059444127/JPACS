@@ -88,11 +88,11 @@ namespace JPACS.SSCPForm
 
             try
             {
-                var patientId = request.Dataset.Get<string>(DicomTag.PatientID);
+                var patientId = request.Dataset.GetTagString(DicomTag.PatientID);
                 if (string.IsNullOrEmpty(patientId))
                     throw new Exception("invalid patient id");
 
-                var studyUid = request.Dataset.Get<string>(DicomTag.StudyInstanceUID);
+                var studyUid = request.Dataset.GetTagString(DicomTag.StudyInstanceUID);
                 var imageUid = request.SOPInstanceUID.UID;
 
                 string folder = Path.Combine(SSCPConfig.Instance.StoragePath, string.Format("{0}{1:D2}{2:d2}", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day), patientId);

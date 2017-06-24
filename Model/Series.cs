@@ -34,7 +34,7 @@ namespace JPACS.Model
 
         public static Series FromDataset(DicomDataset dataset)
         {
-            var seriesUid = dataset.Get<string>(DicomTag.SeriesInstanceUID);
+            var seriesUid = dataset.GetTagString(DicomTag.SeriesInstanceUID);
             Series series = new Series(seriesUid)
             {
                 SeriesNumber = dataset.GetTagString(DicomTag.SeriesNumber),

@@ -15,7 +15,7 @@ namespace JPACS.Model
 
             if (dataset != null && dataset.Contains(tag))
             {
-                value = dataset.Get<string>(tag);
+                value = dataset.Get<string>(tag, "");
             }
 
             return value;
@@ -27,7 +27,7 @@ namespace JPACS.Model
 
             if(dataset != null && dataset.Contains(tag))
             {
-                string strDate = dataset.Get<string>(tag);
+                string strDate = dataset.Get<string>(tag, "");
 
                 if (!DateTime.TryParse(strDate, out dtValue))
                 {
@@ -44,7 +44,7 @@ namespace JPACS.Model
 
             if (dataset != null && dataset.Contains(tag))
             {
-                string strValue = dataset.Get<string>(tag);
+                string strValue = dataset.Get<string>(tag, "");
 
                 if(!int.TryParse(strValue, out intValue))
                 {

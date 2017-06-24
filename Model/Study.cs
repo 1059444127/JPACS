@@ -39,8 +39,8 @@ namespace JPACS.Model
 
             Study study = new Study(studyUid)
             {
-                StudyDateString = dataset.Get<string>(DicomTag.StudyDate),
-                StudyTimeString = dataset.Get<string>(DicomTag.StudyTime)            
+                StudyDateString = dataset.GetTagString(DicomTag.StudyDate),
+                StudyTimeString = dataset.GetTagString(DicomTag.StudyTime)            
             };
 
             return study;
