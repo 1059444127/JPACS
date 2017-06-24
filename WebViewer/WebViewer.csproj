@@ -232,6 +232,15 @@
     <None Include="Properties\PublishProfiles\png.pubxml" />
     <None Include="Properties\PublishProfiles\Profile1.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
+    <Content Include="Scripts\dicom\annArrow.js" />
+    <Content Include="Scripts\dicom\annCurve.js" />
+    <Content Include="Scripts\dicom\annLabel.js" />
+    <Content Include="Scripts\dicom\annLine.js" />
+    <Content Include="Scripts\dicom\annObject.js" />
+    <Content Include="Scripts\dicom\annRect.js" />
+    <Content Include="Scripts\dicom\dicomUtil.js" />
+    <Content Include="Scripts\dicom\dicomViewer.js" />
+    <Content Include="Scripts\dicom\wlWorker.js" />
     <Content Include="Scripts\imgDataWorker.js" />
     <Content Include="Scripts\jCanvaScript.1.5.18.js" />
     <Content Include="Scripts\jquery-1.10.2.js" />
@@ -241,9 +250,21 @@
     <Content Include="Scripts\jquery.validate.min.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\lib\domReady.js" />
+    <Content Include="Scripts\lib\jasmine\boot.js" />
+    <Content Include="Scripts\lib\jasmine\console.js" />
+    <Content Include="Scripts\lib\jasmine\jasmine-html.js" />
+    <Content Include="Scripts\lib\jasmine\jasmine.css" />
+    <Content Include="Scripts\lib\jasmine\jasmine.js" />
+    <Content Include="Scripts\lib\jasmine\jasmine_favicon.png" />
+    <Content Include="Scripts\lib\jCanvaScript.js" />
+    <Content Include="Scripts\lib\jquery.js" />
+    <Content Include="Scripts\lib\require.js" />
     <Content Include="Scripts\modernizr-2.6.2.js" />
     <Content Include="Scripts\respond.js" />
     <Content Include="Scripts\respond.min.js" />
+    <Content Include="Scripts\spec\annLineSpec.js" />
+    <Content Include="Scripts\spec\dicomViewerSpec.js" />
     <Content Include="Scripts\_references.js" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
@@ -284,9 +305,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-    <Folder Include="Scripts\dicom\" />
-    <Folder Include="Scripts\lib\jasmine\" />
-    <Folder Include="Scripts\spec\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fonts\glyphicons-halflings-regular.woff" />

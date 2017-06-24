@@ -9,22 +9,28 @@
 <table class="table">
     <tr>
         <th>
-            @Html.DisplayNameFor(model => model.SOPInstanceUid)
+            @Html.DisplayNameFor(model => model.Series.Study.Patient.PatientId)
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.ImageNumber)
+            @Html.DisplayNameFor(model => model.Series.Study.Patient.PatientName)
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.ImageDateString)
+            @Html.DisplayNameFor(model => model.Series.Study.Patient.Gender)
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.ImageTimeString)
+            BirthDate @*@Html.DisplayNameFor(model => model.Series.Study.Patient.BirthDateString)*@
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.ImageRows)
+            @Html.DisplayNameFor(model => model.Series.Modality)
         </th>
         <th>
-            @Html.DisplayNameFor(model => model.ImageColumns)
+            StudyDate @*@Html.DisplayNameFor(model => model.Series.Study.StudyDateString)*@
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Series.BodyPart)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Series.ViewPosition)
         </th>
         <th></th>
     </tr>
@@ -32,22 +38,28 @@
 @foreach (var item in Model) {
     <tr>
         <td>
-            @Html.DisplayFor(modelItem => item.SOPInstanceUid)
+            @Html.DisplayFor(modelItem => item.Series.Study.Patient.PatientId)
         </td>
         <td>
-            @Html.DisplayFor(modelItem => item.ImageNumber)
+            @Html.DisplayFor(modelItem => item.Series.Study.Patient.PatientName)
         </td>
         <td>
-            @Html.DisplayFor(modelItem => item.ImageDateString)
+            @Html.DisplayFor(modelItem => item.Series.Study.Patient.Gender)
         </td>
         <td>
-            @Html.DisplayFor(modelItem => item.ImageTimeString)
+            @Html.DisplayFor(modelItem => item.Series.Study.Patient.BirthDateString)
         </td>
         <td>
-            @Html.DisplayFor(modelItem => item.ImageRows)
+            @Html.DisplayFor(modelItem => item.Series.Modality)
         </td>
         <td>
-            @Html.DisplayFor(modelItem => item.ImageColumns)
+            @Html.DisplayFor(modelItem => item.Series.Study.StudyDateString)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Series.BodyPart)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Series.ViewPosition)
         </td>
         <td>
             @Html.ActionLink("Details", "Details", new { id=item.Id })

@@ -165,8 +165,16 @@ namespace JPACS.Model
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
+                StringBuilder sbSQL = new StringBuilder();
+                sbSQL.Append("select Image.Id, Image.SOPInstanceUID, Image.ImageColumns, Image.ImageRows, Image.ObjectFilePath,");//4
+                sbSQL.Append("Series.Id, Series.SeriesInstanceUID, Series.BodyPart, Series.ViewPosition, Series.Modality,");//9
+                sbSQL.Append("Study.Id, Study.StudyInstanceUID, Study.StudyDate, Study.StudyTime, Study.AcceptTime,");//14
+                sbSQL.Append("Patient.Id, Patient.PatientID, Patient.PatientName, Patient.BirthDate, Patient.Gender  from Image ");
+                sbSQL.Append("join Series on Image.RefSeriesId = Series.Id ");
+                sbSQL.Append("join Study on Series.RefStudyId = study.Id ");
+                sbSQL.Append("join Patient on study.RefPatientId = Patient.Id");
 
-                SqlCommand com = new SqlCommand("select id, sopinstanceuid, imagerows, imagecolumns, objectfilepath from image");
+                SqlCommand com = new SqlCommand(sbSQL.ToString());
                 com.Connection = conn;
                 com.CommandType = System.Data.CommandType.Text;
 
@@ -175,15 +183,48 @@ namespace JPACS.Model
                     while (reader.Read())
                     {
                         var id = reader.GetInt32(0);
-                        var sopUid = reader.GetString(1);
-
-                        Image newImage = new Image(sopUid)
+                        var uid = reader.GetString(1);
+                        Image newImage = new Image(uid)
                         {
                             Id = id,
-                            ImageRows = reader.GetInt32(2).ToString(),
-                            ImageColumns = reader.GetInt32(3).ToString(),
+                            ImageColumns = reader.GetInt32(2).ToString(),
+                            ImageRows = reader.GetInt32(3).ToString(),
                             FilePath = reader.GetString(4)
                         };
+
+                        id = reader.GetInt32(5);
+                        uid = reader.GetString(6);
+                        Series newSeries = new Series(uid)
+                        {
+                            Id = id,
+                            BodyPart = reader.GetString(7),
+                            ViewPosition = reader.GetString(8),
+                            Modality = reader.GetString(9)
+                        };
+
+                        newImage.Series = newSeries;
+
+                        id = reader.GetInt32(10);
+                        uid = reader.GetString(11);
+                        Study newStudy = new Study(uid)
+                        {
+                            Id = id,
+                            StudyDateString = reader.GetString(12),
+                            StudyTimeString = reader.GetString(13)
+                        };
+                        newSeries.Study = newStudy;
+                        
+                        id = reader.GetInt32(15);
+                        uid = reader.GetString(16);
+                        Patient newPatient = new Patient(uid)
+                        {
+                            Id = id,
+                            PatientName = reader.GetString(17),
+                            BirthDateString = reader.GetString(18),
+                            Gender = reader.GetString(19)
+                        };
+
+                        newStudy.Patient = newPatient;
 
                         images.Add(newImage);
                     }
