@@ -4,21 +4,8 @@
     ViewBag.Title = "Details";
 }
 
-<h4>Image View</h4>
-
-<div>
-    <hr />
-    @*<dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.ImageUrl)
-        </dt>
-        <dd>
-            @Html.DisplayFor(model => model.ImageUrl)
-        </dd>
-
-    </dl>*@
-</div>
-<p>
+<h4 style="display:inline-block;">Image View</h4>
+<p style="display:inline; margin-top:10px; float:right; margin-right:50px;">
     @Html.ActionLink("Back to List", "Index")
 </p>
 
@@ -40,10 +27,6 @@
 
 <div>
     <canvas id="idCanvas" width="1100" height="600" tabindex="1"></canvas>
-</div>
-
-<div id="slider">
-    <div id="custom-handle" class="ui-slider-handle"></div>
 </div>
 
 @section Scripts {

@@ -195,11 +195,11 @@ namespace WebPACS.Controllers
         }
 
         [HttpGet]
-        public FileResult GetJPGImageData(int id, int windowWidth, int windowCenter)
+        public FileResult GetJPGImageData(int id, double windowWidth, double windowCenter)
         {
             try
             {
-
+                
                 DicomImage dcmImage = GetDicomImage(id);
 
                 double originCenter = dcmImage.WindowCenter;
